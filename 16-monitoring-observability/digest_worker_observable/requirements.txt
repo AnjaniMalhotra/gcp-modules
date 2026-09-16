@@ -1,0 +1,11 @@
+flask
+gunicorn
+feedparser
+requests
+google-genai
+google-cloud-secret-manager
+google-cloud-logging
+google-cloud-monitoring
+opentelemetry-api
+opentelemetry-sdk
+opentelemetry-exporter-gcp-trace
