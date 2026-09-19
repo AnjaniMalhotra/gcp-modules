@@ -22,6 +22,7 @@ One agent (Gemini on Vertex AI, wired up with LangChain) with seven real tools a
 ├── docs/                            the seven lessons, plus overview and teacher plan
 ├── deleteds/                        parked lesson demo scripts (see its README)
 ├── commands.md                      every gcloud command run, with real values
+├── PROJECT_NOTES.md                 what the assistant can and can't do, and the links used
 ├── requirements.txt
 └── .env.example
 ```
