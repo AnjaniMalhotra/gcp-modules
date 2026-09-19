@@ -252,4 +252,40 @@ Every result was checked a second way, not just read from the notebook:
 
 ## Teardown
 
-*(added once the resources were deleted)*
+Cloud SQL and Redis (and its bastion VM) have no free tier and bill hourly, so
+they are deleted as soon as the lessons have been run and verified. Stop the SSH
+tunnel first; deleting the bastion VM out from under it would also kill it.
+
+```bash
+pkill -f "6380:10.223.239.179:6379"      # the tunnel started above; leaves any local Redis alone
+
+gcloud sql instances delete agent-memory-sql --project=gcp-fde-project --quiet
+gcloud redis instances delete agent-memory-redis --region=us-central1 --project=gcp-fde-project --quiet
+gcloud compute instances delete agent-memory-bastion --zone=us-central1-a --project=gcp-fde-project --quiet
+```
+
+The Firestore database is free at this scale, but this module created it, so it
+was removed with the rest:
+
+```bash
+gcloud firestore databases delete --database="(default)" --project=gcp-fde-project --quiet
+```
+
+Verify everything is actually gone rather than trusting that `delete` succeeded:
+
+```bash
+gcloud sql instances list --project=gcp-fde-project                          # should be empty
+gcloud redis instances list --region=us-central1 --project=gcp-fde-project   # should be empty
+gcloud compute instances list --project=gcp-fde-project                      # should be empty
+gcloud firestore databases list --project=gcp-fde-project                    # should be empty
+```
+
+**Confirmed on this run:** all four `list` commands came back empty. Deletion was
+also quick this time: both Cloud SQL and Redis were gone within a few minutes
+(Redis took over 20 minutes to delete in Module 13). The Maps API key from
+Module 11 and a Redis already running on the laptop were left alone.
+
+Google documents that a deleted Cloud SQL instance's name cannot be reused for
+a period afterwards (up to about a week). If a re-run fails to create
+`agent-memory-sql`, that is the likely reason; pick a new
+`CLOUD_SQL_INSTANCE_NAME` in `.env`.
