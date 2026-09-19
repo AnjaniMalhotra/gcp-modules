@@ -39,7 +39,7 @@ Do this once, before recording, on your own machine. Every screen below is in `c
 2. Search for **Gmail API**, click it, click **Enable**
 3. Search for **Google Calendar API**, click it, click **Enable**
 
-*(Or from Command Prompt: `gcloud services enable gmail.googleapis.com calendar-json.googleapis.com` — same pattern as Module 2, topic 7.)*
+*(Or from a terminal: `gcloud services enable gmail.googleapis.com calendar-json.googleapis.com` — this is exactly what `commands.md` runs.)*
 
 ### Step 2 — Configure the OAuth Consent Screen
 
@@ -61,16 +61,23 @@ Do this once, before recording, on your own machine. Every screen below is in `c
 ### Step 4 — Place the Credential File
 
 1. Rename the downloaded file to `client_secret.json`
-2. Move it into `code/11-tool-calling-integrations/`
+2. Move it into this module's folder (`11-tool-calling-integrations/`, next to `main.py`)
 3. **Never commit this file** — it's already covered by this repo's `.gitignore`, same treatment as Module 2's `key.json`
 
 ### Step 5 — Run the One-Time Consent Flow
 
-```bat
-python 03_google_apis_oauth_setup.py
+```bash
+./.venv/bin/python 03_google_apis_oauth_setup.py
 ```
 
 This opens your default browser, shows the Google consent screen, and asks you to pick your account and click **Allow**. Once you do, `token.json` is created in the same folder — **that** file is what topics 4 and 5 actually use going forward. You will not need to click "Allow" again unless you delete `token.json` or the scopes change.
+
+Two things to expect on a real run:
+
+- If the consent screen already has an app name (this project's was "LUXE"), that name is what you'll see, because there is one consent screen per project. It's only a label.
+- **"Access blocked ... can only be accessed by developer-approved testers" (Error 403: access_denied)** means your account isn't on the consent screen's **Audience → Test users** list yet. Add it there and re-run this step.
+
+One caveat to the "won't need to click Allow again" promise: Google typically expires refresh tokens after 7 days for External apps left in Testing mode. If a later run fails with `invalid_grant`, delete `token.json` and repeat this step.
 
 ## Hands-On (the code side)
 

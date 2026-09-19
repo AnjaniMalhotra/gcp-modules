@@ -6,17 +6,22 @@ One numbered file per topic (all runnable standalone), plus a `personal_assistan
 
 ## Setup (do this once) — READ THIS FULLY BEFORE RUNNING ANYTHING
 
-1. **Follow `docs/03-google-apis.md` step by step first.** It walks through: enabling the Gmail + Calendar APIs, configuring the OAuth consent screen, creating an OAuth Client ID, and downloading `client_secret.json` into this folder. There's no shortcut around this — it's a real Google Cloud Console setup, done once.
-2. Get a Maps Platform API key (see `06-maps-api.md`), restrict it to Geocoding + Directions APIs.
+[`commands.md`](commands.md) has every `gcloud` command for this module, with real values. Only the OAuth consent screen and client ID can't be done from the CLI.
+
+1. **Enable the APIs and create the Maps key** with the commands in `commands.md` (Gmail, Calendar, Geocoding, Directions, API Keys; the key is restricted to Geocoding + Directions).
+2. **Do the one-time OAuth Console setup** in `docs/03-google-apis.md` (consent screen, Desktop OAuth client, download `client_secret.json` into this folder). There's no CLI shortcut for this part.
 3. Then:
-   ```bat
-   copy .env.example .env
-   REM ...replace every DUMMY VALUE in .env with a real one
-   pip install -r requirements.txt
-   python 03_google_apis_oauth_setup.py
-   REM ...browser opens, click Allow, token.json gets created
-   python 00_setup.py
+   ```bash
+   cp .env.example .env
+   # ...replace every DUMMY VALUE in .env with a real one
+   python3 -m venv .venv
+   ./.venv/bin/pip install -r requirements.txt
+   ./.venv/bin/python 03_google_apis_oauth_setup.py
+   # ...browser opens, click Allow, token.json gets created
+   ./.venv/bin/python 00_setup.py
    ```
+
+(This module has no `.bat` files: it provisions no infrastructure, only APIs, an API key, and an OAuth consent.)
 
 ## Dummy values you must replace
 

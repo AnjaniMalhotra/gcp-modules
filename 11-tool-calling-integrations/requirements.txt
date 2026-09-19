@@ -6,12 +6,14 @@ langchain-core
 
 # LLM (Vertex AI Gemini)
 langchain-google-genai
+google-genai  # imported directly by 00_setup.py and 07_authentication_demo.py
 
 # REST APIs (topic 2)
 requests
 
 # Google APIs + OAuth (topics 3-5)
 google-api-python-client
+google-auth  # imported directly by personal_assistant/auth.py
 google-auth-oauthlib
 google-auth-httplib2
 

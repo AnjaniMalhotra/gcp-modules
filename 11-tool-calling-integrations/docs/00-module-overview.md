@@ -29,7 +29,7 @@ Unlike anything earlier in this course, Gmail and Calendar need a **one-time bro
 
 ## The project: Personal Assistant Agent
 
-Same shape as Module 10's HR assistant — one real project, built incrementally, LangChain-based, fully self-contained in this module's own `code/11-tool-calling-integrations/` folder (no imports from Module 10). Each topic (4, 5, 6) builds one tool; the module closes with a single agent holding all three, able to handle a request like:
+Same shape as Module 10's HR assistant — one real project, built incrementally, LangChain-based, fully self-contained in this module's own folder (no imports from Module 10). Each topic (4, 5, 6) builds one tool; the module closes with a single agent holding all three, able to handle a request like:
 
 > "Check if I'm free Thursday at 3pm. If so, schedule a team meeting, and email everyone the office address with directions."
 
@@ -54,7 +54,7 @@ flowchart TD
 
 - Modules 2, 3, and 10 complete (comfortable with function calling and LangChain's `create_agent`)
 - A Google account you're comfortable testing with (Gmail/Calendar will act on this real account, in a sandboxed way — see topic 3 for how test users work)
-- `.env` filled in (see `code/11-tool-calling-integrations/.env.example`) — Maps needs an API key, Gmail/Calendar need a `client_secret.json` from the Console
+- `.env` filled in (see `.env.example`) — Maps needs an API key, Gmail/Calendar need a `client_secret.json` from the Console
 
 ## What you'll be able to do after this module
 

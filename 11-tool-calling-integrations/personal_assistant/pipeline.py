@@ -13,4 +13,5 @@ def build_assistant():
 
 def ask(agent, question: str) -> str:
     response = agent.invoke({"messages": [{"role": "user", "content": question}]})
-    return response["messages"][-1].content
+    # .content can be a list of content blocks (Gemini thought signatures), .text is always the plain string
+    return str(response["messages"][-1].text)
