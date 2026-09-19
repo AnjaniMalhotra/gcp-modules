@@ -205,6 +205,20 @@ EOF
 # -> tunnel version: 7.0.15 | local version: 8.6.1 | marker on local Redis: False
 ```
 
+### See what is stored in Redis (the Console can't show keys)
+
+With the tunnel open, list every session key with its length and time left:
+
+```bash
+./.venv/bin/python - <<'EOF'
+import redis
+r = redis.Redis(host="localhost", port=6380, decode_responses=True)
+for k in sorted(r.keys("support_session:*")):
+    print(k, r.llen(k), "turns, TTL", r.ttl(k), "s")
+EOF
+# -> support_session:sess_8842:turns 3 turns, TTL 1673 s   (and the other sessions)
+```
+
 ---
 
 ## Running the notebooks

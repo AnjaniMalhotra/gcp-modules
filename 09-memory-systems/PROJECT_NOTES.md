@@ -30,6 +30,134 @@ customer for a ticket number and details. In a brand-new chat session with
 memory it names the settings crash, which came only from the Firestore profile
 written earlier. The memory outlived the conversation.
 
+## Did we build all 8?
+
+Yes. Each of the 8 lessons has a notebook that ran for real on GCP, with no
+errors, and its output is saved inside the notebook. They aren't 8 of the same
+thing, though: three are kinds of memory, three are places to store memory, and
+two combine them.
+
+| # | Lesson | What kind of thing | Notebook | Where the data lived |
+|---|---|---|---|---|
+| 1 | Short-term | a kind of memory | `01_short_term_memory` | inside the program only |
+| 2 | Long-term | a kind of memory | `02_long_term_memory` | a local file (a simple stand-in; lesson 5 does it properly) |
+| 3 | Semantic | a kind of memory | `03_semantic_memory` | rebuilt in memory each run (the embeddings themselves are real, from Vertex AI) |
+| 4 | Redis | a place to store it | `04_redis_memory` | Memorystore Redis |
+| 5 | Firestore | a place to store it | `05_firestore_memory` | Firestore |
+| 6 | Cloud SQL | a place to store it | `06_cloud_sql_memory` | Cloud SQL |
+| 7 | Hybrid | a combination | `07_hybrid_memory` | Redis + Firestore |
+| 8 | Conversation memory | the capstone combination | `08_conversation_memory` | Redis + Firestore + Gemini |
+
+Only the SupportBot notebooks were run in full. The parked generic scripts in
+`deleteds/` were tried only for lessons 1 and 3.
+
+## A tiny example of each, in plain words
+
+The story is one customer, `cust_042`, talking to SupportBot. The numbers below
+are the real ones we got.
+
+1. **Short-term.** The customer writes "My app keeps crashing", then "It happens
+   when I open settings." SupportBot only understands "It" because it still has
+   the first message. It keeps the last 8 messages, so if the chat goes on long
+   enough the oldest ones fall away. We watched the first two disappear.
+2. **Long-term (simple).** Last week SupportBot wrote down: "on the Enterprise
+   plan" and "had a billing issue resolved on Jan 5". We pretended the program
+   restarted, and it read those two facts back from a file. A fact written down
+   survives the program closing.
+3. **Semantic.** The customer writes "the app won't sync my files." SupportBot
+   searches old tickets and finds "Sync feature fails after update", even though
+   the words are different. The match scored 0.77, against about 0.55 to 0.59 for
+   the others. Ask about the weather and everything scores about 0.27: nothing
+   matches.
+4. **Redis.** While a chat is happening, SupportBot keeps the transcript under
+   `support_session:sess_8842:turns` and sets it to expire in 30 minutes, like a
+   whiteboard wiped after the call. We read it back with 1799 seconds left.
+5. **Firestore.** The customer's file: plan Enterprise, prefers email, known
+   issues. When a new issue comes in ("App crashes on opening settings") it is
+   added to the list without erasing anything else in the file.
+6. **Cloud SQL.** Two tables, customers and tickets. Ask "how long do tickets take
+   to fix, per customer?" and the database joins them: Acme Corp's tickets took 2
+   and 12 hours (average 7.0), Small Biz Co's took 1 hour.
+7. **Hybrid.** The customer writes "Still crashing, same issue as before."
+   Redis supplies the current chat and Firestore supplies the file. With both,
+   SupportBot can tell that "same issue as before" means the settings crash.
+8. **Conversation memory.** One helper, `SupportAgentMemory`, wraps 4, 5 and 7 into
+   three actions: remember a message, remember a fact, recall everything. In a
+   brand-new chat the customer asks "is the crash I reported earlier still being
+   looked into?" With no memory the bot asks for a ticket number. With memory it
+   names the settings crash.
+
+## See it, and question it
+
+**Ask it your own questions.** The place to do that is notebook 8, in the cells
+after "Now actually give it to the model". Change the `question` line and re-run
+those cells. It needs Redis and Firestore running, which are deleted right now:
+recreating them takes about 5 minutes (`commands.md`).
+
+**Or try it without recreating anything.** The model only ever receives a block of
+text, so you can reproduce what notebook 8 sends it. This is the notebook's
+real prompt and the exact facts the customer's file held. Save it as a file
+inside `customer_support_agent/` (say `try_it.py`) and run
+`../.venv/bin/python try_it.py`, or paste it into a notebook cell in that folder.
+It has to live there so that `from setup import ...` finds `setup.py`. Change
+the questions at the bottom to try your own:
+
+```python
+from setup import genai_client, MODEL_FLASH
+
+known_issues = ['Billing issue resolved Jan 5', 'App crashes on opening settings - reported today']
+
+def ask(question):
+    context = f"Current chat:\ncustomer: {question}\n\nKnown issues: {known_issues}"
+    prompt = ("You are SupportBot, a customer support agent. Reply directly to the customer's latest "
+              "message, in the first person, using ONLY the facts below. Never mention 'memory' or "
+              "'context'. If the facts don't cover something, say you don't have that information yet.\n\n" + context)
+    return genai_client.models.generate_content(model=MODEL_FLASH, contents=prompt).text.strip()
+
+for q in ["Was my billing problem from January sorted out?", "What is your refund policy?"]:
+    print(f"Q: {q}\nA: {ask(q)}\n")
+```
+
+What we got when we asked four questions that way:
+
+| You ask | SupportBot answers |
+|---|---|
+| "Hi, is the crash I reported earlier still being looked into?" | "Yes, the issue with the app crashing on opening settings was reported today." |
+| "Was my billing problem from January sorted out?" | "Yes, your billing issue was resolved on January 5." |
+| "What plan am I on?" | "I don't have that information yet." |
+| "What is your refund policy?" | "I don't have that information yet." |
+
+Two of those are worth reading closely, because they show the limits:
+
+- **It can sound surer than it should.** The first answer says "Yes", but the
+  file only says the crash was *reported*. Nobody wrote down that anyone is looking
+  into it. On the notebook run it answered more carefully, so the same setup can
+  give different answers on different runs.
+- **It says it doesn't know the plan, but the plan is in Firestore.** The
+  capstone's `recall()` passes only the known issues, not the plan tier
+  (lesson 7's version does include it). The fix is one line. It was not made.
+
+## Where to watch each memory in the Google Cloud Console
+
+There is **no single screen** that shows all the memories: two of them aren't in
+the cloud at all, and Redis hides its contents. Here is where each one can be seen.
+These are the standard Console pages; they were not opened during this run,
+since everything was checked from the command line. They are all empty right now
+because the resources were deleted at the end of the module.
+
+| Memory | Open this | What you'll see | What you won't |
+|---|---|---|---|
+| **Profile** (Firestore) | https://console.cloud.google.com/firestore/databases?project=gcp-fde-project, then the `(default)` database, Data tab | The actual documents: open `support_customer_profiles`, then `cust_042` | nothing hidden here |
+| **Ticket history** (Cloud SQL) | https://console.cloud.google.com/sql/instances?project=gcp-fde-project, then the instance, then **Cloud SQL Studio** | Log in as `postgres` and run `SELECT * FROM support_tickets;` to see the rows | a table browser without logging in |
+| **Session** (Redis) | https://console.cloud.google.com/memorystore/redis/instances?project=gcp-fde-project, then the instance | Health and graphs: memory used, connections | **The keys themselves.** To read them, open the tunnel and use the "See what is stored in Redis" snippet in `commands.md` |
+| **The machine used to reach Redis** | https://console.cloud.google.com/compute/instances?project=gcp-fde-project | Whether the helper VM is running | |
+| **By meaning** (embeddings) | https://console.cloud.google.com/apis/api/aiplatform.googleapis.com/metrics?project=gcp-fde-project | How many Vertex AI requests were made | The vectors: they are never stored |
+| **Graphs for all the services in one place** | https://console.cloud.google.com/monitoring/metrics-explorer?project=gcp-fde-project | Pick any of the services above and chart its numbers | the data inside them |
+
+Short-term memory and the simple long-term file live only in the program and on
+this laptop, so the Console can't show them. The notebooks' saved outputs are
+where you see those.
+
 ## What it can't do (yet)
 
 - **Decide what is worth remembering.** Nothing extracts facts from a chat
@@ -41,6 +169,12 @@ written earlier. The memory outlived the conversation.
   needs a score threshold.
 - **Keep embeddings.** The semantic archive is rebuilt in memory every run,
   which means one embedding call per ticket. There is no vector database.
+- **Promise not to over-reassure.** Told only that a crash was reported, it
+  answered "Yes" to "is it being looked into?". Nothing checks its answers against
+  the facts.
+- **Show the plan in the capstone.** `SupportAgentMemory.recall()` passes only
+  known issues, so the bot says it doesn't know the plan even though Firestore
+  has it.
 - **Cap a session.** The Redis transcript grows with every turn until its TTL
   expires; nothing trims it or summarises it.
 - **Protect customers from each other.** Any code with the project's credentials
@@ -83,13 +217,7 @@ written earlier. The memory outlived the conversation.
 - Compute Engine, for the bastion VM: https://compute.googleapis.com
 - Redis itself is reached through the SSH tunnel at `localhost:6380`, not over the internet.
 
-**Where to look at the resources in the Cloud Console** (standard pages; not
-opened during this run, since everything was checked from the CLI)
-
-- Cloud SQL: https://console.cloud.google.com/sql/instances?project=gcp-fde-project
-- Memorystore: https://console.cloud.google.com/memorystore/redis/instances?project=gcp-fde-project
-- VMs: https://console.cloud.google.com/compute/instances?project=gcp-fde-project
-- Firestore: https://console.cloud.google.com/firestore/databases?project=gcp-fde-project
+**Console pages for watching the memories** are in the section "Where to watch each memory in the Google Cloud Console" above.
 
 ## Where to look next
 
