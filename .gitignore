@@ -1,0 +1,15 @@
+.env
+.env.*
+!.env.example
+
+# Module 11 OAuth secrets: never commit either of these
+client_secret*.json
+token.json
+
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.venv/
+
+.claude/
+.DS_Store
