@@ -1,17 +1,17 @@
 # Code — Module 9: SupportBot Edition
 
-The main track of Module 9: the 8 memory topics taught through one scenario, **SupportBot**, an AI customer support agent handling a messy, multi-day customer interaction. The generic `.py` versions of the same lessons are parked in [`../deleteds/`](../deleteds/README.md) and are not needed.
+The main track of Module 9: the 8 memory topics taught through one scenario, **SupportBot**, an AI customer support agent handling a messy, multi-day customer interaction.
 
 ## Reuses the parent folder's config and infrastructure
 
 - `.env` is read from the **parent** folder (`../.env`), from wherever you run: same `PROJECT_ID`, same Redis instance, same Cloud SQL instance.
-- Table, collection and key names are deliberately different from the generic lessons', so both can coexist in one project:
+- What SupportBot stores, and where:
 
-| | Generic lessons (parked) | SupportBot |
-|---|---|---|
-| Firestore collection | `long_term_memory` | `support_customer_profiles` |
-| Cloud SQL tables | `memories` | `support_customers`, `support_tickets` |
-| Redis key prefix | `session:` | `support_session:` |
+| Service | Name |
+|---|---|
+| Firestore collection | `support_customer_profiles` |
+| Cloud SQL tables | `support_customers`, `support_tickets` |
+| Redis key prefix | `support_session:` |
 
 ## Setup
 

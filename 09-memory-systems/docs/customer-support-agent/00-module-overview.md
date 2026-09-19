@@ -1,7 +1,7 @@
 # Module 9 (Updated) – Memory Systems: SupportBot Edition
 
 **This is a second, use-case-driven pass over Module 9's 8 topics — not a replacement.**
-The original docs (`docs/*.md`) and code (the generic scripts, now parked in `deleteds/`) are kept for backup and reference. This folder teaches the same 8 concepts from scratch, through one coherent, realistic scenario instead of generic placeholder examples.
+The original docs (`docs/*.md`) are kept for reference. The generic scripts they describe were removed as redundant with the notebooks. This folder teaches the same 8 concepts from scratch, through one coherent, realistic scenario instead of generic placeholder examples.
 
 ## The domain: SupportBot, an AI customer support agent
 
@@ -24,7 +24,7 @@ Module 13 (Storage for AI Applications) already used Firestore, Cloud SQL, and R
 
 ## Reuses the same infrastructure as the original Module 9 notebooks
 
-No new Redis instance, no new Cloud SQL instance — these notebooks run against the exact same infrastructure, created by the commands in `commands.md`. Table and collection names are deliberately different (`support_customers`/`support_tickets`, `support_customer_profiles`, `support_session:*` keys) so both the original and this version can coexist in the same project without colliding.
+No new Redis instance, no new Cloud SQL instance — these notebooks run against the exact same infrastructure, created by the commands in `commands.md`. It uses the names `support_customers`/`support_tickets`, `support_customer_profiles`, and `support_session:*` keys.
 
 ## How the pieces connect
 

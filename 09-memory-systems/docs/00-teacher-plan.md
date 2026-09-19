@@ -49,7 +49,7 @@ Keep the syllabus order. Topics 1-3 build the mental model (what kinds of memory
 ### 4. Redis
 **Land this one idea:** "Redis is fast because it's private — and private means your laptop can't reach it directly. That's not a bug, that's the security model."
 - This is the most operationally complex topic in the module — budget real time.
-- Demo sequence: run the Redis provisioning commands from `commands.md` → open a **second** Command Prompt window → paste the SSH tunnel command (the internal Redis IP from `gcloud redis instances describe`) → back in the first window, run `04_redis_memory.py` against `localhost` → point out it's really talking to Redis, just through the tunnel.
+- Demo sequence: run the Redis provisioning commands from `commands.md` → open a **second** Command Prompt window → paste the SSH tunnel command (the internal Redis IP from `gcloud redis instances describe`) → back in the first window, run `customer_support_agent/04_redis_memory.ipynb` (it connects to `localhost`) → point out it's really talking to Redis, just through the tunnel.
 - Common confusion: students try to connect directly to the Redis instance's IP from their laptop and get a timeout. Use this as a live "let's see what happens" moment before showing the tunnel — the failure makes the lesson stick.
 
 ### 5. Firestore

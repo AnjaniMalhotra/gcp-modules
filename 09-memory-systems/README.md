@@ -11,12 +11,11 @@ By default an LLM forgets everything when a conversation ends. This module gives
 ├── commands.md                every gcloud command run, with real values
 ├── PROJECT_NOTES.md           what the memory can and can't do, and the links used
 ├── bat-files/                 the original Windows .bat provisioning scripts, kept for reference
-├── deleteds/                  the original generic .py lessons, parked (see its README)
 ├── requirements.txt
 └── .env.example
 ```
 
-The generic `.py` lessons in `deleteds/` teach the same 8 topics with placeholder data. The notebooks replace them, so each lesson runs once, not twice. Nothing was deleted.
+The generic `.py` versions of these lessons were removed as redundant with the notebooks. `docs/` still has their write-ups next to the SupportBot ones.
 
 ## Setup (do this once)
 
