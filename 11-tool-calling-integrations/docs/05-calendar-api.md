@@ -62,6 +62,8 @@ if not busy_slots:
     print("Created:", created.get("htmlLink"))
 ```
 
+The agent's `personal_assistant/calendar_tool.py` adds one more tool beyond these two lessons: a read-only `list_events(start_date, days)`, so the assistant can answer "what are my plans tomorrow?". It returns each event's start and end, so an event that runs past midnight is visible as such.
+
 ## Common Pitfalls
 
 - Using a naive datetime (no timezone) — the Calendar API expects RFC3339 timestamps with an explicit timezone; ambiguous times cause silent scheduling bugs.

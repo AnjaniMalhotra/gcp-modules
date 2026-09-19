@@ -1,6 +1,6 @@
 # Code — Module 11: Tool Calling & Integrations — Personal Assistant Agent
 
-One agent (Gemini on Vertex AI, wired up with LangChain) with six real tools: Gmail, Calendar and Maps. The runnable project is `main.py` + the `personal_assistant/` package; the seven lessons are in `docs/`. The original one-script-per-topic demos are parked in [`deleteds/`](deleteds/README.md) because the project doesn't need them.
+One agent (Gemini on Vertex AI, wired up with LangChain) with seven real tools across Gmail, Calendar and Maps. The runnable project is `main.py` + the `personal_assistant/` package; the seven lessons are in `docs/`. The original one-script-per-topic demos are parked in [`deleteds/`](deleteds/README.md) because the project doesn't need them.
 
 **Fully self-contained** — no imports from `code/10-rag-engineering/`.
 
@@ -8,17 +8,17 @@ One agent (Gemini on Vertex AI, wired up with LangChain) with six real tools: Gm
 
 ```
 11-tool-calling-integrations/
-├── main.py                          run the assistant (check, schedule, email)
+├── main.py                          run the assistant: demo, --chat, or one question
 ├── 03_google_apis_oauth_setup.py    one-time Google login, creates the token file
 ├── personal_assistant/              the project code
 │   ├── config.py                    settings, reads .env
 │   ├── auth.py                      OAuth login (topic 3), used by Gmail + Calendar
 │   ├── gmail_tool.py                send_email / read_recent_emails (topic 4)
-│   ├── calendar_tool.py             check_availability / create_event (topic 5)
+│   ├── calendar_tool.py             check_availability / create_event (topic 5), list_events
 │   ├── maps_tool.py                 get_address_details / get_directions (topic 6)
 │   ├── llm.py                       Vertex AI Gemini
-│   ├── agent.py                     one agent, all six tools
-│   └── pipeline.py                  build_assistant() and ask()
+│   ├── agent.py                     one agent, all seven tools
+│   └── pipeline.py                  build_assistant(), ask(), chat_turn()
 ├── docs/                            the seven lessons, plus overview and teacher plan
 ├── deleteds/                        parked lesson demo scripts (see its README)
 ├── commands.md                      every gcloud command run, with real values
@@ -57,30 +57,55 @@ Every placeholder is marked in `.env.example` with a `# DUMMY VALUE` comment:
 
 ## Try it
 
-**No side effects.** Run each from this folder:
+**Talk to it.** This is the easiest way to test: ask about your plans, your email, or directions, and it remembers the conversation so follow-ups work.
 
 ```bash
-# 1. Smoke test: .env is filled in and Vertex AI works. Prints "setup OK"
+./.venv/bin/python main.py --chat
+```
+
+```
+You: What are my plans for the next 24 hours?
+You: Am I free tomorrow at 3pm?
+You: How long is the drive from Delhi to Agra?
+You: quit
+```
+
+Or ask a single question and exit:
+
+```bash
+./.venv/bin/python main.py "What are my plans for the next 24 hours?"
+```
+
+Good things to try:
+
+| Ask | Tool it should use | Changes anything? |
+|---|---|---|
+| "What are my plans for the next 2 days?" | `list_events` | No |
+| "Am I free in 2 hours?" | `check_availability` | No |
+| "Show my 3 most recent emails" | `read_recent_emails` | No, but it prints your inbox snippets |
+| "Address of the Taj Mahal" / "drive from Delhi to Agra" | Maps tools | No |
+| "Book a 30 minute meeting in 3 hours" | `check_availability`, then `create_event` | **Yes: creates a real event** |
+| "Email me that it's booked" | `send_email` | **Yes: sends a real email** |
+
+Check Google Calendar and Gmail (Sent) afterwards for anything you asked it to create or send.
+
+**The fixed demo.** `./.venv/bin/python main.py` with no arguments runs three set questions; the third books an event 3 hours out and emails `TEST_EMAIL_ADDRESS`. Run it twice within 3 hours and the second run correctly says you're busy, because the first run's event is in the way.
+
+**Testing one piece at a time, with no side effects:**
+
+```bash
+# Smoke test: .env is filled in and Vertex AI works. Prints "setup OK"
 ./.venv/bin/python -W ignore -c "from personal_assistant.llm import get_llm; print(get_llm().invoke('Reply with exactly: setup OK').text)"
 
-# 2. Maps tool on its own (API key, no login needed)
+# Maps tool on its own (API key, no login needed)
 ./.venv/bin/python -W ignore -c "from personal_assistant.maps_tool import get_directions; print(get_directions.invoke({'origin': 'Golden Gate Bridge, San Francisco, CA', 'destination': \"Fisherman's Wharf, San Francisco, CA\", 'mode': 'walking'}))"
 
-# 3. Calendar tool on its own, read-only (uses your Google login)
-./.venv/bin/python -W ignore -c "from personal_assistant.calendar_tool import check_availability; print(check_availability.invoke({'hours_from_now': 2}))"
-
-# 4. Ask the agent something read-only
-./.venv/bin/python -W ignore -c "from personal_assistant.pipeline import ask, build_assistant; print(ask(build_assistant(), 'Am I free in 2 hours? And how long is the drive from Delhi to Agra?'))"
+# Your calendar on its own, read-only (uses your Google login)
+./.venv/bin/python -W ignore -c "from personal_assistant.calendar_tool import list_events; print(list_events.invoke({'days': 2}))"
 ```
 
-**These change real things.** `main.py` creates a calendar event and sends an email to `TEST_EMAIL_ADDRESS`; the `send_email` tool sends mail, and `read_recent_emails` prints snippets of your inbox.
-
-```bash
-./.venv/bin/python main.py
-```
-
-Check your Gmail (Sent) and Google Calendar afterwards. The lesson demos that used to sit next to `main.py` are in `deleteds/` and still run: see its README.
+The lesson demos that used to sit next to `main.py` are in `deleteds/` and still run: see its README.
 
 ## Note on scope: no multi-agent here
 
-This module deliberately ends with **one agent, six tools** — not a multi-agent system. Splitting this into a Gmail agent + Calendar agent + Maps agent with a supervisor is saved for the LangGraph module, which is purpose-built for that pattern.
+This module deliberately ends with **one agent, seven tools** — not a multi-agent system. Splitting this into a Gmail agent + Calendar agent + Maps agent with a supervisor is saved for the LangGraph module, which is purpose-built for that pattern.

@@ -1,4 +1,5 @@
-"""Calendar as an agent tool — wraps topic 5's freebusy + create-event logic."""
+"""Calendar as an agent tool — wraps topic 5's freebusy + create-event logic,
+plus a read-only list_events so the assistant can answer "what are my plans?"."""
 
 from datetime import datetime, timedelta
 
@@ -48,3 +49,32 @@ def create_event(summary: str, hours_from_now: float, duration_minutes: int = 30
     }
     created = service.events().insert(calendarId="primary", body=event).execute()
     return f"Event '{summary}' created: {created.get('htmlLink')}"
+
+
+@tool
+def list_events(start_date: str = "", days: int = 1) -> str:
+    """List the user's calendar events (title and start time) for `days` whole
+    days beginning on `start_date` (YYYY-MM-DD in the user's local time; empty
+    means today). Use this for "what are my plans today / tomorrow / this
+    week". Events are listed with start and end, so one that begins the evening
+    before and runs past midnight shows up on the next day too. Read-only."""
+    service = _get_calendar_service()
+    tz = datetime.now().astimezone().tzinfo
+    day = datetime.strptime(start_date, "%Y-%m-%d") if start_date else datetime.now()
+    start = datetime(day.year, day.month, day.day, tzinfo=tz)
+    events = service.events().list(
+        calendarId="primary",
+        timeMin=start.isoformat(),
+        timeMax=(start + timedelta(days=days)).isoformat(),
+        singleEvents=True,
+        orderBy="startTime",
+        maxResults=50,
+    ).execute().get("items", [])
+
+    if not events:
+        return f"No events for {days} day(s) starting {start.date()}."
+    return "\n".join(
+        f"{e['start'].get('dateTime', e['start'].get('date'))} to "
+        f"{e['end'].get('dateTime', e['end'].get('date'))} - {e.get('summary', '(no title)')}"
+        for e in events
+    )
