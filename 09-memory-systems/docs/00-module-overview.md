@@ -3,7 +3,7 @@
 **Duration:** 3 hrs
 **Goal:** By default, an LLM forgets everything the moment a conversation ends. This module is where you give your agents actual memory — short-term, long-term, and "remember by meaning" — using real GCP storage services.
 
-> **A second, use-case-driven pass over these same 8 topics exists at [`code/09-memory-systems/docs/customer-support-agent/`](customer-support-agent/00-module-overview.md)** — same concepts, taught through one coherent scenario (an AI customer support agent) instead of generic examples. This page and its topic docs are kept as-is for backup/reference.
+> **A second, use-case-driven pass over these same 8 topics exists at [`docs/customer-support-agent/`](customer-support-agent/00-module-overview.md)** — same concepts, taught through one coherent scenario (an AI customer support agent) instead of generic examples. This page and its topic docs are kept as-is for backup/reference.
 
 ## Why this module exists
 
@@ -33,7 +33,7 @@ This module's code is fully self-contained — it does **not** import from Modul
 
 ## A note on cost — read this before touching the console
 
-Unlike every module before this one, two of the services here (**Memorystore Redis** and **Cloud SQL**) have **no free tier at all** — they bill by the hour, every hour they exist, trial credit or not. Firestore is the exception (genuinely free at this scale, forever). The rule for this module: **provision it, demo it, tear it down** — never leave Redis or Cloud SQL running after you're done. Topic 4 and topic 6 both end with a reminder; there's also one combined `code/09-memory-systems/99_cleanup.bat` that tears down everything at once.
+Unlike every module before this one, two of the services here (**Memorystore Redis** and **Cloud SQL**) have **no free tier at all** — they bill by the hour, every hour they exist, trial credit or not. Firestore is the exception (genuinely free at this scale, forever). The rule for this module: **provision it, demo it, tear it down** — never leave Redis or Cloud SQL running after you're done. Topic 4 and topic 6 both end with a reminder; the teardown commands at the end of `commands.md` delete everything at once.
 
 ## The Redis networking wrinkle
 

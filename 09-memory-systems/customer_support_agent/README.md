@@ -1,13 +1,13 @@
-# Code — Module 9 (Updated): SupportBot Edition
+# Code — Module 9: SupportBot Edition
 
-A second, use-case-driven pass over Module 9's 8 topics. **The original `.py` files one level up (`../01_short_term_memory.py` through `../08_conversation_memory.py`) are untouched and kept for backup/reference** — this folder doesn't replace them, it teaches the same 8 concepts from scratch through one coherent scenario: **SupportBot**, an AI customer support agent handling a real, messy, multi-day customer interaction.
+The main track of Module 9: the 8 memory topics taught through one scenario, **SupportBot**, an AI customer support agent handling a messy, multi-day customer interaction. The generic `.py` versions of the same lessons are parked in [`../deleteds/`](../deleteds/README.md) and are not needed.
 
-## Reuses the parent folder's config and infrastructure — provisions nothing new
+## Reuses the parent folder's config and infrastructure
 
-- `.env` is read from the **parent** folder (`../.env`) — same `PROJECT_ID`, same Redis instance, same Cloud SQL instance. Nothing new to provision, nothing extra to pay for.
-- Table/collection/key names are deliberately different from the originals so both scenarios' data can coexist in the same project:
+- `.env` is read from the **parent** folder (`../.env`), from wherever you run: same `PROJECT_ID`, same Redis instance, same Cloud SQL instance.
+- Table, collection and key names are deliberately different from the generic lessons', so both can coexist in one project:
 
-| | Original Module 9 | SupportBot |
+| | Generic lessons (parked) | SupportBot |
 |---|---|---|
 | Firestore collection | `long_term_memory` | `support_customer_profiles` |
 | Cloud SQL tables | `memories` | `support_customers`, `support_tickets` |
@@ -15,29 +15,30 @@ A second, use-case-driven pass over Module 9's 8 topics. **The original `.py` fi
 
 ## Setup
 
-Assumes the parent folder's setup is already done (`.env` filled in, `pip install -r ../requirements.txt`, `gcloud auth application-default login`).
+Assumes the parent folder's setup is done (`.env` filled in, `pip install -r ../requirements.txt`, `gcloud auth application-default login`, and the infrastructure from [`../commands.md`](../commands.md) for topics 4 to 8).
 
-```bat
-cd customer_support_agent
-python 00_setup.py
+```bash
+../.venv/bin/python setup.py     # prints "setup OK"
 ```
 
 ## Files
 
-| File | Matches Doc Topic | SupportBot use case |
-|------|--------------------|------------------------|
-| `00_setup.py` | — | Loads `../.env`, builds the shared Gemini + Firestore clients |
-| `01_short_term_memory.ipynb` | 1 | The current live chat — "it keeps crashing" needs the last few messages |
-| `02_long_term_memory.ipynb` | 2 | Remembering a returning customer's plan tier and history |
-| `03_semantic_memory.ipynb` | 3 | Finding a similar past-resolved ticket by meaning |
-| `04_redis_memory.ipynb` | 4 | Live chat session state (needs `../04a_provision_redis_and_bastion.bat` + the SSH tunnel) |
-| `05_firestore_memory.ipynb` | 5 | The durable customer profile |
-| `06_cloud_sql_memory.ipynb` | 6 | Structured ticket history (needs `../06a_provision_cloud_sql.bat`) — a real JOIN computing average resolution time |
-| `07_hybrid_memory.ipynb` | 7 | Live session + known profile combined into one context |
-| `08_conversation_memory.ipynb` | 8 | Capstone — the `SupportAgentMemory` class |
+| File | Topic | SupportBot use case | Needs |
+|------|-------|---------------------|-------|
+| `setup.py` | — | Loads `../.env`, builds the Gemini and Firestore clients, reads the Redis host and port | — |
+| `01_short_term_memory.ipynb` | 1 | The current live chat: "it keeps crashing" needs the last few messages | nothing |
+| `02_long_term_memory.ipynb` | 2 | Remembering a returning customer's plan tier and history | nothing |
+| `03_semantic_memory.ipynb` | 3 | Finding a similar past-resolved ticket by meaning | Vertex AI embeddings |
+| `04_redis_memory.ipynb` | 4 | Live chat session state, with a TTL | Redis + SSH tunnel |
+| `05_firestore_memory.ipynb` | 5 | The durable customer profile | Firestore database |
+| `06_cloud_sql_memory.ipynb` | 6 | Structured ticket history, a real JOIN computing average resolution time | Cloud SQL |
+| `07_hybrid_memory.ipynb` | 7 | Live session + known profile combined into one context | Redis + Firestore |
+| `08_conversation_memory.ipynb` | 8 | Capstone: the `SupportAgentMemory` class, then a real Gemini call that uses it | Redis + Firestore + Gemini |
 
 ## How to run these
 
-Same infrastructure sequencing as the original module: provisioning (`../04a_provision_redis_and_bastion.bat`, `../06a_provision_cloud_sql.bat`) happens once, from the **parent** folder, before topics 4/6/7/8 here. When done, `../99_cleanup.bat` tears down the same shared infrastructure — run it once, it covers both scenarios' data on that infra.
+Start Cloud SQL and Redis first (`../commands.md`): they take a few minutes, sometimes far longer. While they provision, run notebooks 1, 2, 3 and 5. Then open the SSH tunnel and run 4, 7 and 8, and run 6 once Cloud SQL is ready. When you finish, run the teardown commands at the end of `../commands.md`: Redis and Cloud SQL bill hourly.
 
-Notebooks 1, 2, 3, 5 need no infrastructure and can run any time `.env` is filled in.
+**Redis port.** The notebooks connect to `REDIS_HOST`:`REDIS_PORT` from `.env` (default `localhost:6379`). If a local Redis already owns 6379, tunnel to another port such as 6380 and set `REDIS_PORT=6380`.
+
+**Files these notebooks write.** Notebook 2 writes `support_customer_facts.json` next to itself. It is gitignored.

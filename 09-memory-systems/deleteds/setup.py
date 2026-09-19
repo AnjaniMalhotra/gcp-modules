@@ -1,11 +1,15 @@
-"""Shared setup for the SupportBot notebooks.
+"""
+Shared setup for every Python script in this module.
 
-    from setup import genai_client, firestore_client, EMBEDDING_MODEL, MODEL_FLASH
+    from setup import genai_client, firestore_client, EMBEDDING_MODEL, ...
 
-Loads .env from the PARENT folder (code/09-memory-systems/.env) rather than
-duplicating it — this scenario reuses the same project config and the same
-provisioned Redis/Cloud SQL infrastructure as the original Module 9 topics,
-just with different table/collection names so both can coexist.
+Run directly to sanity-check your environment:
+
+    python setup.py
+
+Config comes from .env (copy .env.example to .env first). This module is
+self-contained — it does not import from another module, even
+though the embeddings client below uses the same SDK taught there.
 """
 
 import os
@@ -13,12 +17,15 @@ from dotenv import load_dotenv
 from google import genai
 from google.cloud import firestore
 
-load_dotenv(dotenv_path="../.env")
+load_dotenv()
 
 PROJECT_ID = os.environ["PROJECT_ID"]
 LOCATION = os.environ["LOCATION"]
 REGION = os.environ["REGION"]
 ZONE = os.environ["ZONE"]
+
+REDIS_INSTANCE_NAME = os.environ["REDIS_INSTANCE_NAME"]
+BASTION_VM_NAME = os.environ["BASTION_VM_NAME"]
 
 CLOUD_SQL_INSTANCE_NAME = os.environ["CLOUD_SQL_INSTANCE_NAME"]
 CLOUD_SQL_DB_NAME = os.environ["CLOUD_SQL_DB_NAME"]
@@ -33,5 +40,8 @@ firestore_client = firestore.Client(project=PROJECT_ID)
 
 if __name__ == "__main__":
     print("Firestore project:", firestore_client.project)
-    response = genai_client.models.generate_content(model=MODEL_FLASH, contents="Reply with exactly: setup OK")
+    response = genai_client.models.generate_content(
+        model=MODEL_FLASH,
+        contents="Reply with exactly: setup OK",
+    )
     print(response.text)

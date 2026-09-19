@@ -27,7 +27,7 @@ flowchart LR
 
 ## Hands-On
 
-See `code/09-memory-systems/customer_support_agent/02_long_term_memory.ipynb` — a local file stands in for durable storage here; topic 5 (Firestore) formalizes this properly.
+See `customer_support_agent/02_long_term_memory.ipynb` — a local file stands in for durable storage here; topic 5 (Firestore) formalizes this properly.
 
 ```python
 import json

@@ -1,14 +1,14 @@
 # Teacher Plan — Module 9: Memory Systems
 
 **Total time:** 3 hrs (180 min) — includes ~25 min buffer, larger than usual because two topics involve real infrastructure provisioning with unpredictable timing.
-**Format this module:** mixed — pure Python for concepts (1, 2, 3), `.bat` provisioning + Python for storage backends (4, 5, 6), pure Python again for the combined topics (7, 8).
+**Format this module:** mixed — pure Python for concepts (1, 2, 3), `gcloud` provisioning + Python for storage backends (4, 5, 6), pure Python again for the combined topics (7, 8).
 
 ## Before you start recording/teaching
 
 - [ ] Modules 2 and 3 complete, `.env` filled in for this module
 - [ ] **Kick off Cloud SQL instance creation BEFORE you start recording**, or right at the start of topic 4 — instance creation takes 5-10 minutes and you do not want to sit there waiting on camera. By the time you reach topic 6, it'll be ready.
 - [ ] Two Command Prompt windows ready (one for the SSH tunnel, one for everything else) — needed from topic 4 onward
-- [ ] `code/09-memory-systems/99_cleanup.bat` open and ready to run at the very end — do not skip this, Redis and Cloud SQL both bill hourly
+- [ ] the cleanup commands at the end of `commands.md` open and ready to run at the very end — do not skip this, Redis and Cloud SQL both bill hourly
 
 ## Suggested pacing (180 min)
 
@@ -22,7 +22,7 @@
 | 6 | Cloud SQL | 22 | Python demo (instance already provisioned in background since topic 4) |
 | 7 | Hybrid Memory | 18 | Python demo combining 4 + 5 |
 | 8 | Conversation Memory | 22 | Capstone class + demo |
-| — | Cleanup + recap + buffer | 28 | Run `99_cleanup.bat` live, rapid-fire Q&A |
+| — | Cleanup + recap + buffer | 28 | Run the cleanup commands from `commands.md` live, rapid-fire Q&A |
 
 ## Teaching order rationale
 
@@ -49,7 +49,7 @@ Keep the syllabus order. Topics 1-3 build the mental model (what kinds of memory
 ### 4. Redis
 **Land this one idea:** "Redis is fast because it's private — and private means your laptop can't reach it directly. That's not a bug, that's the security model."
 - This is the most operationally complex topic in the module — budget real time.
-- Demo sequence: run `04a_provision_redis_and_bastion.bat` → open a **second** Command Prompt window → paste the SSH tunnel command (the internal Redis IP printed by the provisioning script) → back in the first window, run `04_redis_memory.py` against `localhost` → point out it's really talking to Redis, just through the tunnel.
+- Demo sequence: run the Redis provisioning commands from `commands.md` → open a **second** Command Prompt window → paste the SSH tunnel command (the internal Redis IP from `gcloud redis instances describe`) → back in the first window, run `04_redis_memory.py` against `localhost` → point out it's really talking to Redis, just through the tunnel.
 - Common confusion: students try to connect directly to the Redis instance's IP from their laptop and get a timeout. Use this as a live "let's see what happens" moment before showing the tunnel — the failure makes the lesson stick.
 
 ### 5. Firestore
@@ -71,11 +71,11 @@ Keep the syllabus order. Topics 1-3 build the mental model (what kinds of memory
 ### 8. Conversation Memory
 **Land this one idea:** "This is what topics 1 through 7 were building toward — a class an actual agent could import and call."
 - Demo: a `ConversationMemory` class wrapping topic 7's pattern — `remember()`, `recall()`, a clean interface hiding Redis/Firestore details from whatever agent uses it.
-- This is also the natural moment to run `99_cleanup.bat` live and narrate what's being torn down and why.
+- This is also the natural moment to run the cleanup commands from `commands.md` live and narrate what's being torn down and why.
 
 ## Wrap-up
 
-- Run `99_cleanup.bat` on screen — narrate each resource being deleted, tie back to Module 2's Cost Optimization topic
+- Run the cleanup commands from `commands.md` on screen — narrate each resource being deleted, tie back to Module 2's Cost Optimization topic
 - Rapid-fire recap: one question from each topic's "Quick Recap" (8 questions)
 - Homework before whichever module comes next: re-read `.env.example` for this module and understand what each key was for — especially `CLOUD_SQL_PASSWORD`, the first real secret this course has handled
 - No "tease next module" here since modules are being built out of order — just confirm what's coming next when it's decided

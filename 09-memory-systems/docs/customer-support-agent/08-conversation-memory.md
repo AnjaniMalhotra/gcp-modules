@@ -27,7 +27,7 @@ flowchart LR
 
 ## Hands-On — the capstone
 
-See `code/09-memory-systems/customer_support_agent/08_conversation_memory.ipynb`.
+See `customer_support_agent/08_conversation_memory.ipynb`.
 
 ```python
 class SupportAgentMemory:
@@ -58,6 +58,8 @@ memory.remember_turn("customer", "My app keeps crashing when I open settings.")
 memory.remember_fact("App crashes on opening settings - reported today")
 print(memory.recall())
 ```
+
+The notebook now goes one step past printing the context: it sends it to Gemini in a **brand-new chat session** for the same customer, next to the same question with **no memory**. The no-memory answer asks the customer for a ticket number; the with-memory answer names the settings crash, which it could only know from the Firestore profile written earlier. That contrast is the proof that the memory outlives the conversation.
 
 ## Common Pitfalls
 

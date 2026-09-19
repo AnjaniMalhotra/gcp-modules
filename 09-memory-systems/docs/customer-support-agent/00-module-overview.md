@@ -1,7 +1,7 @@
 # Module 9 (Updated) – Memory Systems: SupportBot Edition
 
 **This is a second, use-case-driven pass over Module 9's 8 topics — not a replacement.**
-The original docs (`code/09-memory-systems/docs/*.md`) and code (`code/09-memory-systems/*.py`) stay exactly as they are, kept for backup and reference. This folder teaches the same 8 concepts from scratch, through one coherent, realistic scenario instead of generic placeholder examples.
+The original docs (`docs/*.md`) and code (the generic scripts, now parked in `deleteds/`) are kept for backup and reference. This folder teaches the same 8 concepts from scratch, through one coherent, realistic scenario instead of generic placeholder examples.
 
 ## The domain: SupportBot, an AI customer support agent
 
@@ -24,7 +24,7 @@ Module 13 (Storage for AI Applications) already used Firestore, Cloud SQL, and R
 
 ## Reuses the same infrastructure as the original Module 9 notebooks
 
-No new Redis instance, no new Cloud SQL instance — these notebooks run against the exact same provisioning scripts already in `code/09-memory-systems/` (`04a_provision_redis_and_bastion.bat`, `06a_provision_cloud_sql.bat`, `99_cleanup.bat`). Table and collection names are deliberately different (`support_customers`/`support_tickets`, `support_customer_profiles`, `support_session:*` keys) so both the original and this version can coexist in the same project without colliding.
+No new Redis instance, no new Cloud SQL instance — these notebooks run against the exact same infrastructure, created by the commands in `commands.md`. Table and collection names are deliberately different (`support_customers`/`support_tickets`, `support_customer_profiles`, `support_session:*` keys) so both the original and this version can coexist in the same project without colliding.
 
 ## How the pieces connect
 
@@ -45,8 +45,8 @@ flowchart TD
 
 ## Format
 
-Real Jupyter notebooks (matching Modules 7 and 13), one per topic — self-contained, loading `.env` from the parent `code/09-memory-systems/` folder rather than duplicating it.
+Real Jupyter notebooks (matching Modules 7 and 13), one per topic — self-contained, loading `.env` from the parent `09-memory-systems/` folder rather than duplicating it.
 
 ## Prerequisites
 
-Same as the original Module 9: Modules 2, 3 complete, `.env` filled in at `code/09-memory-systems/.env`, and — for topics 4 and 6 — the same provisioning discipline (provision → demo → `99_cleanup.bat`) already established there.
+Same as the original Module 9: Modules 2, 3 complete, `.env` filled in at the module root, and — for topics 4 and 6 — the same provisioning discipline (provision → demo → tear down with the commands in `commands.md`) already established there.

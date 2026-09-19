@@ -26,7 +26,7 @@ flowchart LR
 
 ## Hands-On — reuses the exact same infrastructure as the original topic
 
-Provisioning: `../04a_provision_redis_and_bastion.bat` (same instance, same bastion VM, same SSH tunnel — no new infra). See `code/09-memory-systems/customer_support_agent/04_redis_memory.ipynb`.
+Provisioning: the Redis and bastion commands in `../commands.md` (same instance, same bastion VM, same SSH tunnel — no new infra). See `customer_support_agent/04_redis_memory.ipynb`.
 
 ```python
 import redis
@@ -44,6 +44,7 @@ print("Expires in (seconds):", r.ttl(session_key))
 
 ## Common Pitfalls
 
+- **A local Redis already on port 6379.** If something on your own machine (a Homebrew Redis, say) already listens on 6379, the tunnel's `-L 6379:...` fails to bind, prints `Address already in use`, and your code quietly talks to the *local* Redis instead of Memorystore. Check with `lsof -nP -iTCP:6379 -sTCP:LISTEN`. Use another local port (e.g. `-L 6380:...` and `REDIS_PORT=6380` in `.env`) and confirm you reached Memorystore by comparing `redis.Redis(...).info()['redis_version']` with `gcloud redis instances describe`.
 - Forgetting the SSH tunnel from the shared provisioning script needs to be open in its own window while this notebook runs.
 - Setting no TTL — session data should expire; it's not meant to be permanent (that's Firestore's job, topic 5).
 - Confusing this with Module 13's Redis use case — that one cached LLM *answers*; this one holds the live chat *session state*. Same service, genuinely different job.

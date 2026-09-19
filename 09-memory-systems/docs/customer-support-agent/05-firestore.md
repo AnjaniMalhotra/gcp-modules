@@ -26,7 +26,7 @@ flowchart LR
 
 ## Hands-On
 
-See `code/09-memory-systems/customer_support_agent/05_firestore_memory.ipynb`.
+See `customer_support_agent/05_firestore_memory.ipynb`.
 
 ```python
 from setup import firestore_client

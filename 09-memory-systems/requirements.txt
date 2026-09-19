@@ -5,3 +5,7 @@ sqlalchemy
 redis
 numpy
 python-dotenv
+
+# the SupportBot lessons are notebooks
+jupyter
+ipykernel

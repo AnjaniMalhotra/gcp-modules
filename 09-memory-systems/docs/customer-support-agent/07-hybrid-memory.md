@@ -29,7 +29,7 @@ flowchart TD
 
 ## Hands-On
 
-See `code/09-memory-systems/customer_support_agent/07_hybrid_memory.ipynb`.
+See `customer_support_agent/07_hybrid_memory.ipynb`.
 
 ```python
 def get_support_context(session_id: str, customer_id: str) -> str:

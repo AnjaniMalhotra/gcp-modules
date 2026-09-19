@@ -6,6 +6,10 @@
 client_secret*.json
 token*.json
 
+# written into the working directory by the long-term-memory lessons
+long_term_memory.json
+support_customer_facts.json
+
 __pycache__/
 *.pyc
 .ipynb_checkpoints/

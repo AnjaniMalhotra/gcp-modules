@@ -29,7 +29,7 @@ flowchart LR
 
 ## Hands-On
 
-See `code/09-memory-systems/customer_support_agent/03_semantic_memory.ipynb` — same embeddings API as the original module, written fresh, no cross-module or cross-scenario imports.
+See `customer_support_agent/03_semantic_memory.ipynb` — same embeddings API as the original module, written fresh, no cross-module or cross-scenario imports.
 
 ```python
 import numpy as np

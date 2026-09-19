@@ -1,50 +1,69 @@
 # Code — Module 9: Memory Systems
 
-This module is self-contained (see `.claude/CLAUDE.md` — no cross-module imports) and mixes two formats: `.bat` for provisioning real infrastructure (Redis, Cloud SQL), Python for everything else.
+By default an LLM forgets everything when a conversation ends. This module gives an agent memory: what it said a moment ago, what it knows about a returning customer, and past cases it can find by meaning, backed by real GCP services (Redis, Firestore, Cloud SQL). The main track is **SupportBot**, an AI customer support agent, taught as 8 notebooks in [`customer_support_agent/`](customer_support_agent/README.md).
 
-> **A second, use-case-driven pass over these same 8 topics exists at [`customer_support_agent/`](customer_support_agent/README.md)** — Jupyter notebooks teaching the same concepts through one coherent scenario (an AI customer support agent), reusing this folder's infrastructure. These `.py` files are kept as-is for backup/reference, not replaced.
+## Layout
+
+```
+09-memory-systems/
+├── customer_support_agent/    the main track: 8 SupportBot notebooks + setup.py
+├── docs/                      the lessons: 8 original topics, plus the SupportBot versions
+├── commands.md                every gcloud command run, with real values
+├── PROJECT_NOTES.md           what the memory can and can't do, and the links used
+├── bat-files/                 the original Windows .bat provisioning scripts, kept for reference
+├── deleteds/                  the original generic .py lessons, parked (see its README)
+├── requirements.txt
+└── .env.example
+```
+
+The generic `.py` lessons in `deleteds/` teach the same 8 topics with placeholder data. The notebooks replace them, so each lesson runs once, not twice. Nothing was deleted.
 
 ## Setup (do this once)
 
-```bat
-copy .env.example .env
-REM ...then edit .env with your real PROJECT_ID and a real CLOUD_SQL_PASSWORD
-pip install -r requirements.txt
-00_setup_vars.bat
-python 00_setup.py
+All infrastructure is created with `gcloud` commands: see [`commands.md`](commands.md). The `.bat` scripts in `bat-files/` are the Windows-only originals of the same commands.
+
+```bash
+cp .env.example .env
+# ...set PROJECT_ID and a real CLOUD_SQL_PASSWORD (commands.md shows how to generate one)
+sed -i '' 's/\r$//' .env          # only if the file has Windows line endings: see the note below
+python3 -m venv .venv
+./.venv/bin/pip install -r requirements.txt
+gcloud auth application-default login
+./.venv/bin/python customer_support_agent/setup.py     # prints "setup OK"
 ```
-`00_setup.py` should print `setup OK`. Keep `.env` and `00_setup_vars.bat` describing the *same* resources — they're read by Python and `.bat` scripts respectively.
 
-## Files
+**Line endings matter.** If `.env` has Windows (CRLF) line endings, `source .env` leaves a hidden character on every value and `gcloud` rejects the resource names. `commands.md` has the details.
 
-| File | Matches Doc Topic | What It Does |
-|------|--------------------|---------------|
-| `.env.example` | — | Every config key this module needs, including the first real secret (`CLOUD_SQL_PASSWORD`) |
-| `requirements.txt` | — | Python packages this module needs |
-| `00_setup_vars.bat` | — | Config for the `.bat` provisioning scripts |
-| `00_setup.py` | — | Loads `.env`, builds the shared Gemini + Firestore clients |
-| `01_short_term_memory.py` | 1 | Sliding-window in-process memory |
-| `02_long_term_memory.py` | 2 | Persisting memory to a local file |
-| `03_semantic_memory.py` | 3 | Embeddings-based recall, written fresh (no import from Module 3) |
-| `04a_provision_redis_and_bastion.bat` | 4 | Creates Memorystore Redis + a bastion VM |
-| `04_redis_memory.py` | 4 | Redis demo, run through the SSH tunnel |
-| `05_firestore_memory.py` | 5 | Firestore demo — no provisioning needed |
-| `06a_provision_cloud_sql.bat` | 6 | Creates the Cloud SQL Postgres instance — **start this during topic 4**, it's slow |
-| `06_cloud_sql_memory.py` | 6 | Cloud SQL demo via the Python Connector — no bastion needed |
-| `07_hybrid_memory.py` | 7 | Redis + Firestore combined |
-| `08_conversation_memory.py` | 8 | Capstone: a `ConversationMemory` class wrapping topic 7 |
-| `99_cleanup.bat` | — | Deletes every billable resource this module created — **always run this last** |
+## What each notebook needs
 
-## How to run these — the order matters here more than in past modules
+| Notebook | Teaches | Needs |
+|---|---|---|
+| `01_short_term_memory` | The live chat window | nothing |
+| `02_long_term_memory` | Remembering across sessions (a local file) | nothing |
+| `03_semantic_memory` | Finding a similar past ticket by meaning | Vertex AI embeddings |
+| `04_redis_memory` | Live session state with a TTL | Redis + bastion VM + SSH tunnel |
+| `05_firestore_memory` | The durable customer profile | a Firestore database |
+| `06_cloud_sql_memory` | Structured ticket history, with a JOIN | Cloud SQL |
+| `07_hybrid_memory` | Live session + known profile in one context | Redis + Firestore |
+| `08_conversation_memory` | The `SupportAgentMemory` class, then a real Gemini call that uses it | Redis + Firestore + Gemini |
 
-1. `00_setup_vars.bat` then `04a_provision_redis_and_bastion.bat` (kicks off both Redis and the bastion VM)
-2. **Also start `06a_provision_cloud_sql.bat` around now** — Cloud SQL takes 5-10 minutes, so let it run in the background while you work through topics 4 and 5
-3. In a **second** Command Prompt window: the SSH tunnel command that `04a` printed — leave this window open and running
-4. Back in the first window: `python 01_short_term_memory.py`, `02_...`, `03_...`, `04_redis_memory.py`, `05_firestore_memory.py`
-5. By the time you reach topic 6, Cloud SQL should be ready — `python 06_cloud_sql_memory.py`
-6. `07_hybrid_memory.py`, `08_conversation_memory.py`
-7. **`99_cleanup.bat`** — every time, without exception. Redis and Cloud SQL have no free tier.
+Notebooks 1, 2, 3 and 5 can run as soon as `.env` is filled in. Start Cloud SQL and Redis first, since they take a few minutes (sometimes far longer), and do those four while you wait.
+
+## Try it
+
+Run any notebook from `customer_support_agent/`:
+
+```bash
+cd customer_support_agent
+../.venv/bin/jupyter nbconvert --to notebook --execute --inplace 03_semantic_memory.ipynb
+```
+
+Or open them in VS Code or Jupyter and run cell by cell. The best one to watch is **notebook 8**: its last two cells ask Gemini the same question twice, once with no memory and once in a brand-new chat session with memory. The first answer asks for a ticket number. The second names the settings crash the customer reported earlier, which only the Firestore profile knew.
+
+## Redis: one trap worth knowing
+
+The tunnel to Redis uses a local port. If something on your machine already listens on 6379 (a local Redis is common), the tunnel fails to bind but keeps running, and your code quietly talks to the *local* Redis. Use another port such as 6380 and set `REDIS_PORT=6380` in `.env`. `commands.md` shows how to prove you reached Memorystore.
 
 ## Cost note
 
-Firestore is free at this scale. Memorystore and Cloud SQL are **not** — confirmed against Google's own Always-Free product list (neither appears on it). They bill every hour they exist, trial credit or not. This is the first module in the course where "forgot to clean up" has a real dollar cost attached.
+Firestore is free at this scale. Memorystore and Cloud SQL are **not**: they bill by the hour for as long as they exist (roughly $0.12/hour together), trial credit or not. Delete them when you finish: the teardown commands are at the end of `commands.md`.

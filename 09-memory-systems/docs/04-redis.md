@@ -32,17 +32,13 @@ Every other service in this course so far, you could call directly from your lap
 
 ## Hands-On
 
-**Step 1 — provision (one Command Prompt window):**
-```bat
-04a_provision_redis_and_bastion.bat
-```
-This creates the Redis instance and a small bastion VM, and prints the Redis instance's internal IP address.
+**Step 1 — provision:** run the Redis and bastion commands in `commands.md` (Topic 4). They create the Redis instance and a small bastion VM.
 
-**Step 2 — open the tunnel (a SECOND Command Prompt window, leave it running):**
-```bat
-gcloud compute ssh %BASTION_VM_NAME% --zone=%ZONE% -- -L 6379:REDIS_INTERNAL_IP:6379 -N
+**Step 2 — open the tunnel (a SECOND terminal window, leave it running):**
+```bash
+gcloud compute ssh agent-memory-bastion --zone=us-central1-a -- -L 6379:REDIS_INTERNAL_IP:6379 -N
 ```
-Replace `REDIS_INTERNAL_IP` with what step 1 printed. This window will look like it's "hanging" — that's correct, it's holding the tunnel open.
+Replace `REDIS_INTERNAL_IP` with the output of `gcloud redis instances describe agent-memory-redis --region=us-central1 --format="value(host)"`. This window will look like it's "hanging" — that's correct, it's holding the tunnel open.
 
 **Step 3 — back in the FIRST window, run the demo:**
 ```python
@@ -63,10 +59,11 @@ Your Python code talks to `localhost:6379` — the tunnel makes that transparent
 
 ## Common Pitfalls
 
+- **A local Redis already on port 6379.** If something on your own machine (a Homebrew Redis, say) already listens on 6379, the tunnel's `-L 6379:...` fails to bind, prints `Address already in use`, and your code quietly talks to the *local* Redis instead of Memorystore. Check with `lsof -nP -iTCP:6379 -sTCP:LISTEN`. Use another local port (e.g. `-L 6380:...` and `REDIS_PORT=6380` in `.env`) and confirm you reached Memorystore by comparing `redis.Redis(...).info()['redis_version']` with `gcloud redis instances describe`.
 - Trying to connect directly to the Redis instance's internal IP from your laptop — this will simply time out, because your laptop isn't inside the VPC. The tunnel is not optional.
 - Closing the second Command Prompt window (killing the tunnel) and then wondering why the Python script suddenly can't connect.
 - Forgetting to set a TTL — without one, "short-term" data in Redis will happily sit there forever, still billing you.
-- **Leaving the Redis instance or bastion VM running after the demo** — neither has a free tier; run `99_cleanup.bat` when done.
+- **Leaving the Redis instance or bastion VM running after the demo** — neither has a free tier; run the cleanup commands in `commands.md` when done.
 
 ## Quick Recap
 

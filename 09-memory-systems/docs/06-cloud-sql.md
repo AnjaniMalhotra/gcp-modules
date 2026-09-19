@@ -32,10 +32,7 @@ Redis needed a bastion VM because Memorystore has no built-in secure way to reac
 
 ## Hands-On
 
-**Step 1 — provision (kick this off back in topic 4, since it's slow):**
-```bat
-06a_provision_cloud_sql.bat
-```
+**Step 1 — provision (kick this off back in topic 4, since it can be slow):** run the Cloud SQL commands in `commands.md` (Topic 6).
 
 **Step 2 — connect and use it from Python:**
 ```python
@@ -86,7 +83,7 @@ with engine.connect() as conn:
 - Hardcoding the database password in code instead of `.env` — this is the first *real secret* (not just config) this course has handled; treat `CLOUD_SQL_PASSWORD` with the same care as a service account key.
 - Forgetting the instance takes several minutes to provision — start it early (topic 4), never live-wait for it on camera.
 - Modeling something naturally flexible/nested (like topic 5's per-user fact lists) as rigid SQL tables — that's Firestore's job; use Cloud SQL when the data is genuinely tabular.
-- **Leaving the instance running after the demo** — no free tier; run `99_cleanup.bat` when done.
+- **Leaving the instance running after the demo** — no free tier; run the cleanup commands in `commands.md` when done.
 
 ## Quick Recap
 

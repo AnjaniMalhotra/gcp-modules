@@ -26,7 +26,7 @@ flowchart LR
 
 ## Hands-On — reuses the exact same Cloud SQL instance as the original topic
 
-Provisioning: `../06a_provision_cloud_sql.bat` (same instance, different table names). See `code/09-memory-systems/customer_support_agent/06_cloud_sql_memory.ipynb`.
+Provisioning: the Cloud SQL commands in `../commands.md` (same instance, different table names). See `customer_support_agent/06_cloud_sql_memory.ipynb`.
 
 ```python
 # Same Cloud SQL Python Connector pattern as the original topic
@@ -59,7 +59,7 @@ result = conn.execute(sqlalchemy.text("""
 
 - Trying to answer "average resolution time across all customers" against Firestore — this is precisely the aggregation Cloud SQL exists for.
 - Reusing the original topic's `memories` table name — this scenario uses `support_customers`/`support_tickets` on purpose, so both can coexist.
-- Leaving the instance running after the demo — no free tier, same as the original topic; `../99_cleanup.bat` still applies.
+- Leaving the instance running after the demo — no free tier, same as the original topic; the cleanup commands in `../commands.md` still apply.
 
 ## Quick Recap
 
