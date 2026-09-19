@@ -1,0 +1,15 @@
+.env
+.env.*
+!.env.example
+
+# credentials from other modules that may still sit on disk
+client_secret*.json
+token*.json
+
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.venv/
+
+.claude/
+.DS_Store
