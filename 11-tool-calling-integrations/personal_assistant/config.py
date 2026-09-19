@@ -21,7 +21,7 @@ MAPS_API_KEY = os.getenv("MAPS_API_KEY")
 ## GMAIL / CALENDAR (topics 3-5 — OAuth, see auth.py)
 
 CLIENT_SECRET_FILE = "client_secret.json"
-TOKEN_FILE = "token.json"
+TOKEN_FILE = os.getenv("TOKEN_FILE", "token.json")  # one token file per Google account
 
 SCOPES = [
     "https://www.googleapis.com/auth/gmail.readonly",

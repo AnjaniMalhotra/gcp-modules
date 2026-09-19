@@ -15,8 +15,9 @@
 # from the Console — see the doc above).
 
 # %%
+from personal_assistant import config
 from personal_assistant.auth import get_credentials
 
 creds = get_credentials()
-print("Success! token.json created/refreshed.")
+print(f"Success! {config.TOKEN_FILE} created/refreshed.")
 print("Scopes granted:", creds.scopes)

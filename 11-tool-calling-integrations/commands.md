@@ -130,10 +130,11 @@ Fisherman's Wharf.
 
 Google has no supported `gcloud` command for creating an OAuth consent screen
 or a Desktop OAuth client, and the "Allow" click can't be scripted (the module
-docs say the same). One account is used for all of it, both to configure the
-project and as the Gmail/Calendar account the assistant acts on:
-`mentordivesh@gmail.com` (the project Owner). Sign into the browser as that
-account for every step below:
+docs say the same). The Console steps are done as the project Owner,
+`mentordivesh@gmail.com`. The Gmail/Calendar account the assistant acts on is
+whoever signs in at the consent step: `mentordivesh@gmail.com` first, then
+`anjanimalhotra09@gmail.com` (see "Using a second Google account" below).
+Steps 1 to 4 are signed in as the Owner:
 
 1. Open https://console.cloud.google.com/apis/credentials/consent?project=gcp-fde-project
    On this project a consent screen **already existed, named "LUXE"**
@@ -141,8 +142,9 @@ account for every step below:
    OAuth client shows its name, so nothing needed creating. If your project has
    none, create one: app name, support + developer contact email, **External**,
    no scopes (the code requests them).
-2. **Audience -> Test users -> Add users**: `mentordivesh@gmail.com`. While an
-   External app is in "Testing", only listed test users can consent. Skipping
+2. **Audience -> Test users -> Add users**: every account that will sign in
+   (here `mentordivesh@gmail.com` at first, later `anjanimalhotra09@gmail.com`).
+   While an External app is in "Testing", only listed test users can consent. Skipping
    this gave `Error 403: access_denied` ("Access blocked ... can only be
    accessed by developer-approved testers") on the first attempt here.
 3. Open https://console.cloud.google.com/apis/credentials?project=gcp-fde-project
@@ -235,6 +237,61 @@ EOF
 
 ---
 
+## Using a second Google account (one token file per account)
+
+The module keeps a login in a token file. `personal_assistant/config.py` reads
+that file's name from the `TOKEN_FILE` environment variable (default
+`token.json`), so each Google account gets its own file and adding one never
+overwrites another. `.gitignore` covers `token*.json`.
+
+How `anjanimalhotra09@gmail.com` was added:
+
+1. Console, as the Owner: **Audience -> Test users -> Add users** ->
+   `anjanimalhotra09@gmail.com` -> Save. (`mentordivesh@gmail.com` was then
+   removed from the list, so it can no longer sign in to this app.)
+2. Point the local `.env` (gitignored) at the new account:
+
+   ```
+   TEST_EMAIL_ADDRESS=anjanimalhotra09@gmail.com
+   TOKEN_FILE=token_anjani.json
+   ```
+
+   Or for a single run, without editing `.env`:
+
+   ```bash
+   TOKEN_FILE=token_anjani.json TEST_EMAIL_ADDRESS=anjanimalhotra09@gmail.com ./.venv/bin/python main.py
+   ```
+3. Run the consent flow and pick `anjanimalhotra09@gmail.com` in the account
+   picker (Chrome may pre-select the other account):
+
+   ```bash
+   BROWSER='open -a "Google Chrome" %s' ./.venv/bin/python 03_google_apis_oauth_setup.py
+   ```
+4. Confirm whose login the file holds, using Google rather than the script's
+   own message:
+
+   ```bash
+   ./.venv/bin/python -W ignore - <<'EOF'
+   from googleapiclient.discovery import build
+   from personal_assistant.auth import get_credentials
+   creds = get_credentials()
+   print(build("gmail","v1",credentials=creds).users().getProfile(userId="me").execute()["emailAddress"])
+   print(build("calendar","v3",credentials=creds).calendarList().get(calendarId="primary").execute()["id"])
+   EOF
+   # -> anjanimalhotra09@gmail.com  (both lines)
+   ```
+5. Run the same four commands as above (`04`, `05`, `07`, `main.py`). Results,
+   each checked through the Gmail and Calendar APIs:
+   - Sent mail: "Test from Module 11" and "Module 11 Demo Meeting Booked", both
+     to `anjanimalhotra09@gmail.com`, labelled `SENT` and `INBOX`.
+   - Calendar: "Team Meeting (Module 11 demo)" at 20:33 IST and "Module 11 Demo
+     Meeting" at 23:33 IST, both `confirmed`.
+   - Topic 7 printed `OAuth auth: acting as anjanimalhotra09@gmail.com`.
+   - The third `main.py` answer printed as a plain sentence, so the `ask()` fix
+     from above also holds on a real tool-chaining run.
+
+---
+
 ## Cleanup
 
 Nothing here is billable: no databases, VMs or instances were created. The
@@ -246,17 +303,24 @@ the commands for when you want everything removed. **They have not been run.**
 gcloud services api-keys delete 9305be2d-5ac3-4afd-a407-dfcd0ed6729c \
   --project=gcp-fde-project --location=global
 
-# the two calendar events the demo created
+# the two calendar events the demo created in anjanimalhotra09@gmail.com's
+# calendar (uses TOKEN_FILE from .env)
 ./.venv/bin/python - <<'EOF'
 from googleapiclient.discovery import build
 from personal_assistant.auth import get_credentials
 c = build("calendar", "v3", credentials=get_credentials())
-for eid in ("104m4v1jol7pnr3injrhkn5m04", "nq495t89nv09pqtsq77i1mcn2k"):
+for eid in ("qfo7pu35535coenb3kltfius90", "skb2c9nj8gme79e33ddaisfm40"):
     c.events().delete(calendarId="primary", eventId=eid).execute()
 EOF
 
-# local credentials (both are gitignored)
-rm token.json client_secret.json
+# the two events from the earlier mentordivesh@gmail.com runs. Run the same
+# snippet with TOKEN_FILE=token.json in front and these ids. That account was
+# later removed from the test-user list, so its login may no longer work; if it
+# fails, delete the events by hand in Google Calendar instead.
+#   104m4v1jol7pnr3injrhkn5m04   nq495t89nv09pqtsq77i1mcn2k
+
+# local credentials (all gitignored)
+rm token.json token_anjani.json client_secret.json
 
 # optional: turn the APIs back off
 gcloud services disable gmail.googleapis.com calendar-json.googleapis.com \
@@ -266,7 +330,7 @@ gcloud services disable gmail.googleapis.com calendar-json.googleapis.com \
 
 Two things cleanup can't do from here:
 
-- **The two test emails stay in the inbox.** The token only has the
+- **The test emails stay in the inboxes** (two in each account). The token only has the
   `gmail.readonly` and `gmail.send` scopes, which can't delete or trash mail.
 - **Revoking access and deleting the OAuth client are browser-only:** remove the
   app at https://myaccount.google.com/permissions and delete the client under

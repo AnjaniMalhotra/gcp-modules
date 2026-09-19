@@ -4,7 +4,7 @@
 
 # Module 11 OAuth secrets: never commit either of these
 client_secret*.json
-token.json
+token*.json
 
 __pycache__/
 *.pyc
