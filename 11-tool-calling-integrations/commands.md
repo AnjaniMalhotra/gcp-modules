@@ -8,6 +8,14 @@ equivalent; it's documented under "Manual steps" below.
 
 Module 11 has no `.bat` files, so there is no `bat-files/` folder here.
 
+**About the demo scripts.** Several commands below run `00_setup.py`, `01`, `02`,
+`04`, `05`, `06` or `07`. They were run from the module root, where those
+scripts lived at the time. A later cleanup moved them to `deleteds/` because the
+assistant doesn't need them. To re-run one today, prefix `PYTHONPATH=.` and add
+the folder, e.g. `PYTHONPATH=. ./.venv/bin/python deleteds/06_maps_tool.py`
+(`00_setup.py`'s smoke test is now a one-liner in the README). `main.py` and
+`03_google_apis_oauth_setup.py` did not move.
+
 Project used throughout:
 
 ```

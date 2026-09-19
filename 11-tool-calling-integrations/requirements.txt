@@ -6,9 +6,9 @@ langchain-core
 
 # LLM (Vertex AI Gemini)
 langchain-google-genai
-google-genai  # imported directly by 00_setup.py and 07_authentication_demo.py
+google-genai  # imported directly by the scripts in deleteds/
 
-# REST APIs (topic 2)
+# HTTP (used by google-auth for token refresh in personal_assistant/auth.py)
 requests
 
 # Google APIs + OAuth (topics 3-5)

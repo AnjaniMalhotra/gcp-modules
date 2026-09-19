@@ -62,7 +62,7 @@ Keep the syllabus order. Topics 1-2 are foundation (you already know function ca
 
 ### 7. Authentication
 **Land this one idea:** "Three different auth patterns, three different reasons — API key (public data), OAuth (acting as a user), service account (acting as itself). Picking the right one is a security decision, not a formality."
-- Demo: `07_authentication_demo.py` runs all three patterns side by side against their respective APIs, printing which credential type was used for each.
+- Demo: `deleteds/07_authentication_demo.py` (run with `PYTHONPATH=.`) runs all three patterns side by side against their respective APIs, printing which credential type was used for each.
 - Close the module with the combined **Personal Assistant Agent** demo — the "check Thursday, schedule it, email directions" request from the module overview, run live.
 - Common confusion: students think "more permissions = safer to just always use." Reinforce least-privilege scoping explicitly (e.g., `gmail.send` instead of full Gmail access) — ties back to Module 2's IAM lesson.
 
