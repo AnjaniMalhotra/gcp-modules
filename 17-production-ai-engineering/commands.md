@@ -515,3 +515,55 @@ because the laptop stalled mid-run, so it says nothing about the limit.
 
 The topic's other point stands: a rate limit belongs at the front door, declared in the OpenAPI spec, with no
 hand-written code in the service.
+
+---
+
+## Topic 10 — Cost optimization
+
+`10_cost_comparison_demo.py` needs `PROJECT_ID` (and `SERVICE_URL`) from `.env`, and the ADC login:
+
+```bash
+set -a && source .env && set +a
+./.venv/bin/python 10_cost_comparison_demo.py
+```
+
+**Part 1: Flash against Pro, same prompt.** The script prints token counts and an estimated cost:
+
+| Model | input | "output" (as printed) | total | estimated cost (script's prices) |
+|---|---|---|---|---|
+| gemini-2.5-flash | 26 | 115 | 919 | $0.000092 |
+| gemini-2.5-pro | 26 | 80 | 1015 | $0.002537 |
+
+The prices in the script are hard-coded illustrative numbers ($0.0001 and $0.0025 per 1K tokens, blended). They were
+not checked against Google's current price list, so read the ratio (about 25 times), not the dollars.
+
+**Part 2: what caching really saves, from a request counter.** 6 incoming requests (3 of them duplicates) produced
+**3 real Gemini calls, so 3 were avoided**. Checked a second way: the 3 texts were then found in Firestore under the
+standard-policy key. The counter (`/stats`) lives in each instance's memory and resets on a cold start, so the
+before/after difference is only reliable when one instance answers the whole run, as it did here.
+
+### Finding: most of the tokens are hidden "thinking"
+
+The script's "output tokens" hides them. Gemini 2.5 spends most of its tokens thinking before it answers, and they are
+billed as output. For one request (`usage_metadata`):
+
+| Model | prompt | answer | **thinking** | total |
+|---|---|---|---|---|
+| gemini-2.5-flash | 26 | 183 | **877** | 1086 |
+| gemini-2.5-pro | 26 | 119 | **1010** | 1155 |
+
+A moderation verdict is a simple task, so thinking can be switched off. The same request with structured output (as the
+service sends it), Flash only, one sample:
+
+```python
+config = types.GenerateContentConfig(response_mime_type="application/json", response_schema=schema,
+                                     thinking_config=types.ThinkingConfig(thinking_budget=0))
+# thinking on (default):  answer 68, thinking 301, total 414  -> flagged=False
+# thinking off (budget 0): answer 37, thinking   0, total  82  -> flagged=False   (about 80% fewer tokens)
+```
+
+That is one input, not a quality test. It shows the size of the lever; before using it in the service, compare the
+verdicts on a batch of real comments. It was **not applied** to `moderaai/main.py`.
+
+The three cost levers seen in this module, in order of effect: caching (calls avoided entirely), the model choice (Flash
+against Pro), and the thinking budget (tokens per call). Instance limits (topic 1) cap the worst case.
