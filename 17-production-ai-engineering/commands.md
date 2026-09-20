@@ -426,3 +426,92 @@ gcloud run services update-traffic moderaai --region=us-central1 --project=gcp-f
 
 So there are two safety nets: the app times the Gemini call out and returns a clean 502 after its retries, and
 Cloud Run cuts anything that runs past 30 seconds with a 504.
+
+---
+
+## Topic 9 — Rate limiting with API Gateway (partly proven)
+
+**Result in one line:** the gateway, the API key and the 10-requests-a-minute limit are all set up and working as
+configured, and the requests are counted, but **no request was ever rejected with a 429**. Not proven end to end.
+
+Point the OpenAPI spec at the live service (the placeholder `MODERAAI_SERVICE_URL_HERE` is replaced with
+`https://moderaai-1039893753206.us-central1.run.app`), then (`09_api_gateway_rate_limit_setup.bat`):
+
+```bash
+gcloud api-gateway apis create moderaai-api --project=gcp-fde-project
+
+gcloud api-gateway api-configs create moderaai-config --api=moderaai-api --openapi-spec=09_openapi_spec.yaml \
+  --backend-auth-service-account=moderaai-sa@gcp-fde-project.iam.gserviceaccount.com --project=gcp-fde-project
+```
+
+### Gotcha: a step the course script leaves out
+
+The API has its own Google-managed service, which must be enabled on the project before its key and quota work:
+
+```bash
+gcloud api-gateway apis describe moderaai-api --project=gcp-fde-project --format="value(managedService)"
+# -> moderaai-api-1s49kcx22x0o6.apigateway.gcp-fde-project.cloud.goog
+gcloud services enable moderaai-api-1s49kcx22x0o6.apigateway.gcp-fde-project.cloud.goog --project=gcp-fde-project
+```
+
+Create the gateway. This took **10 min 41 s** (16:34:43 to 16:45:24), the slowest step of the module:
+
+```bash
+gcloud api-gateway gateways create moderaai-gateway --api=moderaai-api --api-config=moderaai-config \
+  --location=us-central1 --project=gcp-fde-project
+gcloud api-gateway gateways describe moderaai-gateway --location=us-central1 --project=gcp-fde-project \
+  --format="value(state,defaultHostname)"
+# -> ACTIVE   moderaai-gateway-d9pxw392.uc.gateway.dev
+```
+
+Create the API key. The script's key is unrestricted; this one works **only with this API**. The key string is read
+straight into the gitignored `.env` and never printed:
+
+```bash
+KEY=$(gcloud services api-keys create --project=gcp-fde-project --display-name="ModeraAI API Key" \
+  --api-target=service=moderaai-api-1s49kcx22x0o6.apigateway.gcp-fde-project.cloud.goog \
+  --format="value(response.keyString)")
+sed -i '' "s|^API_KEY=.*|API_KEY=$KEY|" .env && unset KEY
+```
+
+Careful when reading the gateway's logs: the `jsonPayload.api_key` field contains the raw key. Leave it out of any
+`--format`.
+
+### What was checked, and what it showed
+
+| Check | Result |
+|---|---|
+| `POST /moderate` with no key | **401**, "Method doesn't allow unregistered callers" |
+| `GET /health` through the gateway | 200 (the spec puts no key on it) |
+| `POST /moderate?key=...` | 200 |
+| Limit registered in the API's service config | yes: `moderate-limit`, `1/min/{project}`, value 10, cost 1 per request |
+| 15 requests in a burst, then 40 in a burst, with the key | **15/15 and 40/40 returned 200, none 429** |
+| Requests counted against the quota | yes: Cloud Monitoring `quota/rate/net_usage` showed 15 in one minute, `quota/limit` showed 10 |
+
+Read the config and the counters (the second is a REST call because `gcloud` has no command for it):
+
+```bash
+gcloud endpoints configs describe moderaai-config-36830eg9l1o5e \
+  --service=moderaai-api-1s49kcx22x0o6.apigateway.gcp-fde-project.cloud.goog --format="yaml(quota)"
+
+curl -G "https://monitoring.googleapis.com/v3/projects/gcp-fde-project/timeSeries" -H "Authorization: Bearer $(gcloud auth print-access-token)" \
+  --data-urlencode 'filter=metric.type="serviceruntime.googleapis.com/quota/rate/net_usage" AND resource.labels.service="moderaai-api-1s49kcx22x0o6.apigateway.gcp-fde-project.cloud.goog"' \
+  --data-urlencode "interval.startTime=<START>" --data-urlencode "interval.endTime=<END>"
+```
+
+The gateway's own log for each call showed `api_key_state: VERIFIED` and `response_code_details: via_upstream`:
+the key is recognised and the call is forwarded, but the limit is not applied.
+
+### Why it probably did not block, and what would prove it
+
+The API's project (the "producer") and the project the key belongs to (the "consumer") are the same one,
+`gcp-fde-project`. Endpoints quotas are documented as limiting each *consumer* project, so the likely explanation is
+that a project's own calls to its own API are not held to the limit. **This is a hypothesis: Google's
+documentation pages read for this run did not confirm or deny it.** Proving it needs a key from a second project
+acting as a separate customer; that was not done.
+
+One earlier test run of 15 requests is also on record and should be ignored: it took 952 s and showed 9 timeouts
+because the laptop stalled mid-run, so it says nothing about the limit.
+
+The topic's other point stands: a rate limit belongs at the front door, declared in the OpenAPI spec, with no
+hand-written code in the service.

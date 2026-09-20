@@ -8,7 +8,7 @@ schemes:
 produces:
   - application/json
 x-google-backend:
-  address: MODERAAI_SERVICE_URL_HERE
+  address: https://moderaai-1039893753206.us-central1.run.app
   protocol: h2
 x-google-management:
   metrics:
