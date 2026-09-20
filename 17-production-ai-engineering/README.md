@@ -1,51 +1,73 @@
 # Code — Module 17: Production AI Engineering
 
-One small, self-contained Flask service — **ModeraAI**, a content moderation API — hardened topic by topic against real production failure modes: bursty traffic, unreliable dependencies, hangs, abuse, and cost blowups. No code imported from any other module, per the isolation rule.
+One small, self-contained Flask service, **ModeraAI** (a content moderation API), hardened topic by topic against real production failure modes: bursty traffic, unreliable dependencies, hangs, abuse, and cost blowups. It uses no code from any other module.
 
-**Scope note:** deployed `--allow-unauthenticated`, same as Module 16, so every topic's `curl`/`load_test.py` call is testable with a plain URL — auth/IAM isn't this module's focus.
+**Scope note:** the service is deployed `--allow-unauthenticated`, so anyone with its URL can call it (and cause Gemini calls). That keeps every topic testable with a plain `curl`, but delete the service when you finish.
 
-## Setup (do this once)
+## Layout
 
-```bat
-copy .env.example .env
-REM ...fill in real values: your GitHub username (topic 3)
-gcloud auth application-default login
-pip install -r requirements.txt
-00_setup_vars.bat
-00a_initial_setup.bat
+```
+17-production-ai-engineering/
+├── moderaai/                  the service: main.py, Dockerfile, requirements.txt, cloudbuild.yaml
+├── load_test.py               fires N concurrent requests (topics 1 and 9)
+├── 10_cost_comparison_demo.py Flash vs Pro tokens, and what caching saves (topic 10)
+├── 09_openapi_spec.yaml       the API Gateway definition with the 10-requests-a-minute quota
+├── commands.md                every gcloud command run, with real values, and what each showed
+├── PROJECT_NOTES.md           what was found, what it can't do, where to look in the Console
+├── bat-files/                 the original Windows .bat scripts, kept for reference
+├── docs/                      the lessons: one file per topic
+├── requirements.txt           for the two local scripts
+└── .env.example
 ```
 
-## Files
+## The ten topics
 
-| File | Matches Doc Topic | What It Does |
-|------|--------------------|---------------|
-| `.env.example` | — | Every config key this module needs |
-| `00_setup_vars.bat` | — | Config for every other `.bat` script |
-| `00a_initial_setup.bat` | — | APIs, Artifact Registry repo, Firestore DB, runtime service account |
-| `moderaai/` | — | The service itself: `main.py`, `Dockerfile`, `requirements.txt`, `cloudbuild.yaml` |
-| `01_deploy_and_load_test.bat` + `load_test.py` | 1 | Deploy v1, fire 50 concurrent requests, watch instance count scale |
-| `02_cloud_build_manual.bat` | 2 | A manual, one-off remote build + push + deploy via `cloudbuild.yaml` |
-| `03_create_ci_cd_trigger.bat` | 3 | Creates the push-to-deploy trigger (GitHub connection is a one-time Console step done first) |
-| `04_deploy_v2_no_traffic.bat` | 4 | Builds/deploys `v2.0.0` (stricter policy) alongside v1, at 0% traffic |
-| `05_rollback_demo.bat` | 5 | Promotes v2, proves it over-flags safe text, rolls back to v1 |
-| `06_test_caching_retries_timeouts.bat` | 6, 7, 8 | curl calls demoing caching, the retry switch, and the timeout switch (all built into `main.py`) |
-| `09_openapi_spec.yaml` + `09_api_gateway_rate_limit_setup.bat` | 9 | API Gateway with a declarative 10-req/min quota — no hand-rolled rate-limiting code |
-| `10_cost_comparison_demo.py` | 10 | Flash vs. Pro token/cost comparison, plus proof caching cuts real Gemini calls |
-| `99_cleanup.bat` | — | Tears everything down |
+| # | Topic | What you do | Run with |
+|---|---|---|---|
+| 1 | Scaling | 50 concurrent requests, count the instances, then cap them | `load_test.py` |
+| 2 | Cloud Build | build, push and deploy with one remote command | `gcloud builds submit` |
+| 3 | CI/CD | a push to GitHub deploys the service by itself | a Cloud Build trigger |
+| 4 | Versioning | deploy v2 next to v1 at 0% traffic | `gcloud run deploy --no-traffic --tag` |
+| 5 | Rollbacks | promote v2, see it wrongly flag safe text, roll back to v1 | `gcloud run services update-traffic` |
+| 6 | Caching | the same text twice: the second answer is instant | built into `main.py` |
+| 7 | Retries | `?simulate_transient_failure=true` fails twice, then succeeds | built into `main.py` |
+| 8 | Timeouts | `?simulate_hang=true` stalls and gets cut off | built into `main.py` |
+| 9 | Rate limiting | API Gateway limits each project to 10 requests a minute | `09_openapi_spec.yaml` |
+| 10 | Cost | Flash against Pro, and how many Gemini calls caching avoids | `10_cost_comparison_demo.py` |
 
-## How to run these — order matters
+## Setup
 
-1. `00_setup_vars.bat`, then `00a_initial_setup.bat`
-2. `01_deploy_and_load_test.bat` (topic 1) — **copy the printed service URL into `.env`/`00_setup_vars.bat` as `SERVICE_URL`**
-3. `02_cloud_build_manual.bat` (topic 2)
-4. Connect GitHub in the Console (Cloud Build → Triggers → Connect Repository), then `03_create_ci_cd_trigger.bat` (topic 3) — test by pushing a real commit
-5. `04_deploy_v2_no_traffic.bat` (topic 4)
-6. `05_rollback_demo.bat` (topic 5) — **fill in the printed v1 revision name where the script pauses**
-7. `06_test_caching_retries_timeouts.bat` (topics 6-8)
-8. Edit `09_openapi_spec.yaml` — replace `MODERAAI_SERVICE_URL_HERE` with the real `SERVICE_URL` — then `09_api_gateway_rate_limit_setup.bat` (topic 9) — **copy the printed hostname into `.env`/`00_setup_vars.bat` as `GATEWAY_URL`, and the printed API key as `API_KEY`** (the quota is scoped per calling project, and the API key is how the gateway identifies which project is calling — no key, no enforcement)
-9. `python 10_cost_comparison_demo.py` (topic 10)
-10. `99_cleanup.bat` when you're done with the module
+All the infrastructure is created with `gcloud`: see [`commands.md`](commands.md). The `.bat` scripts in `bat-files/` are the Windows-only originals of the same steps.
+
+```bash
+cp .env.example .env
+# ...set PROJECT_ID and GITHUB_USERNAME
+sed -i '' 's/\r$//' .env .env.example requirements.txt moderaai/requirements.txt   # only if they have Windows line endings
+python3 -m venv .venv && ./.venv/bin/pip install -r requirements.txt
+gcloud auth application-default login
+set -a && source .env && set +a
+```
+
+**Line endings matter.** The course files use Windows (CRLF) line endings, which break `source .env` on macOS and Linux and leave a hidden character on every value. `commands.md` has the details. The `.bat` files must keep their CRLF.
+
+## Run order
+
+Follow [`commands.md`](commands.md); the order matters:
+
+1. Setup: the Artifact Registry repo, the Firestore database, the `moderaai-sa` service account and its two roles.
+2. Topic 1: deploy v1, copy the printed Service URL into `.env` as `SERVICE_URL`, then load-test.
+3. Topic 2: the manual Cloud Build, run from the **repo root**.
+4. Topic 3: needs your GitHub account: a one-time browser authorisation, then the trigger and a real push.
+5. Topics 4 and 5: v2 and the rollback. The service's *settings* stay at whatever the last deploy set, so deploy with `MODERATION_POLICY` set explicitly afterwards.
+6. Topics 6 to 8: `curl` calls against the service.
+7. Topic 9: put the real service URL in `09_openapi_spec.yaml`, create the gateway (about 11 minutes), then the API key, which is restricted to this API.
+8. Topic 10: `./.venv/bin/python 10_cost_comparison_demo.py`.
+9. Teardown, at the end of `commands.md`.
+
+## What was changed from the course files
+
+The service and scripts were corrected where running them for real showed a problem: the cache key ignored the moderation policy (which made the rollback demo look like it did nothing), `/healthz` is reserved by Cloud Run, retries were never logged, the build paths assumed a different repo layout, and a few scripts had wrong flags. The full list, with what each one looked like when it went wrong, is in [`PROJECT_NOTES.md`](PROJECT_NOTES.md).
 
 ## Cost note
 
-Cloud Run, Cloud Build (120 free build-minutes/day), Artifact Registry (0.5 GB free), Firestore (1 GiB free storage + generous free daily reads/writes), and API Gateway (2M free calls/month) all comfortably cover this module's teaching load. The only real spend is Gemini calls themselves — kept small by this module's own caching (topic 6) and Flash-by-default model choice. `99_cleanup.bat` is still good practice.
+Cloud Run, Cloud Build, Artifact Registry, Firestore and API Gateway all stay inside their free tiers for this module's load. The only real spend is the Gemini calls, kept small by the module's own caching. Nothing here bills by the hour the way Redis and Cloud SQL do, but the public service is still worth deleting when you finish.
