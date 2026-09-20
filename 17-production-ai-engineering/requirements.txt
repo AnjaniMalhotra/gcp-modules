@@ -1,5 +1,5 @@
-# For the local demo/test scripts in this folder (load_test.py,
-# 10_cost_comparison_demo.py). The service's own dependencies live in
+# For the local demo/test scripts in this folder (scripts/load_test.py,
+# scripts/cost_comparison_demo.py). The service's own dependencies live in
 # moderaai/requirements.txt, installed inside its container build.
 
 requests==2.32.3

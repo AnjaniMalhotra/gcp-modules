@@ -26,7 +26,7 @@ That's the entire product — one URL, send text, get a verdict, powered by one 
 
 | # | Topic | What we harden | How we test it |
 |---|-------|-------------------|------------------|
-| 1 | [Scaling](01-scaling.md) | Handling a burst of traffic | `load_test.py` fires 50 concurrent requests; watch Cloud Run's instance count graph live |
+| 1 | [Scaling](01-scaling.md) | Handling a burst of traffic | `scripts/load_test.py` fires 50 concurrent requests; watch Cloud Run's instance count graph live |
 | 2 | [Cloud Build](02-cloud-build.md) | Building the container reliably | `gcloud builds submit` run manually, then inspect the build log |
 | 3 | [CI/CD](03-ci-cd.md) | Deploying automatically | Push a real commit to GitHub, watch a build+deploy happen with zero manual commands |
 | 4 | [Versioning](04-versioning.md) | Knowing exactly what's live | Deploy `v2.0.0` alongside `v1.0.0`, call both by their distinct URLs/revisions |
@@ -47,7 +47,7 @@ Rather than hand-building rate-limiting logic, this topic reuses **API Gateway's
 
 ```mermaid
 flowchart TD
-    A["ModeraAI v1<br/>deployed via Cloud Build + CI/CD"] --> B["Scaling: load_test.py"]
+    A["ModeraAI v1<br/>deployed via Cloud Build + CI/CD"] --> B["Scaling: scripts/load_test.py"]
     A --> C["Caching + Retries + Timeouts<br/>(built into the service)"]
     D["ModeraAI v2<br/>stricter policy"] --> E["Rollback to v1"]
     A --> F["API Gateway<br/>rate limiting"]

@@ -14,7 +14,7 @@
 
 | # | Topic | Minutes | Format |
 |---|-------|---------|--------|
-| 1 | Scaling | 25 | `load_test.py`, watch instances scale, then cap and re-run |
+| 1 | Scaling | 25 | `scripts/load_test.py`, watch instances scale, then cap and re-run |
 | 2 | Cloud Build | 20 | Manual `gcloud builds submit` |
 | 3 | CI/CD | 30 | GitHub connection (one-time) + push-to-deploy demo |
 | 4 | Versioning | 20 | Deploy v2 alongside v1 |
@@ -34,7 +34,7 @@ Keep the syllabus order — it's already well-sequenced: get the service deploye
 
 ### 1. Scaling
 **Land this one idea:** "Nobody scales infinitely for free — this is a dial, and topic 10 is about where you set it."
-- Demo: run `load_test.py` (50 concurrent requests), watch Cloud Run's instance count climb live. Then redeploy with `--max-instances=2`, run it again, watch requests queue and slow down instead.
+- Demo: run `scripts/load_test.py` (50 concurrent requests), watch Cloud Run's instance count climb live. Then redeploy with `--max-instances=2`, run it again, watch requests queue and slow down instead.
 - Common confusion: students expect autoscaling to be limitless by default. It has a ceiling you set, on purpose.
 
 ### 2. Cloud Build

@@ -9,22 +9,28 @@ One small, self-contained Flask service, **ModeraAI** (a content moderation API)
 ```
 17-production-ai-engineering/
 ├── moderaai/                  the service: main.py, Dockerfile, requirements.txt, cloudbuild.yaml
-├── load_test.py               fires N concurrent requests (topics 1 and 9)
-├── 10_cost_comparison_demo.py Flash vs Pro tokens, and what caching saves (topic 10)
-├── 09_openapi_spec.yaml       the API Gateway definition with the 10-requests-a-minute quota
+│                              (keep this path: the CI/CD trigger and cloudbuild.yaml point at it)
+├── scripts/
+│   ├── load_test.py           fires N concurrent requests (topics 1 and 9)
+│   └── cost_comparison_demo.py  Flash vs Pro tokens, and what caching saves (topic 10)
+├── gateway/
+│   └── openapi_spec.yaml      the API Gateway definition with the 10-requests-a-minute quota
+├── docs/                      the lessons: one file per topic
+├── bat-files/                 the original Windows .bat scripts, kept for reference
 ├── commands.md                every gcloud command run, with real values, and what each showed
 ├── PROJECT_NOTES.md           what was found, what it can't do, where to look in the Console
-├── bat-files/                 the original Windows .bat scripts, kept for reference
-├── docs/                      the lessons: one file per topic
-├── requirements.txt           for the two local scripts
+├── requirements.txt           for the two scripts
 └── .env.example
 ```
+
+The scripts and the gateway spec were moved into `scripts/` and `gateway/` after the run, to tidy the folder. The
+`.bat` files in `bat-files/` are the unchanged originals, so they still use the old locations.
 
 ## The ten topics
 
 | # | Topic | What you do | Run with |
 |---|---|---|---|
-| 1 | Scaling | 50 concurrent requests, count the instances, then cap them | `load_test.py` |
+| 1 | Scaling | 50 concurrent requests, count the instances, then cap them | `scripts/load_test.py` |
 | 2 | Cloud Build | build, push and deploy with one remote command | `gcloud builds submit` |
 | 3 | CI/CD | a push to GitHub deploys the service by itself | a Cloud Build trigger |
 | 4 | Versioning | deploy v2 next to v1 at 0% traffic | `gcloud run deploy --no-traffic --tag` |
@@ -32,8 +38,8 @@ One small, self-contained Flask service, **ModeraAI** (a content moderation API)
 | 6 | Caching | the same text twice: the second answer is instant | built into `main.py` |
 | 7 | Retries | `?simulate_transient_failure=true` fails twice, then succeeds | built into `main.py` |
 | 8 | Timeouts | `?simulate_hang=true` stalls and gets cut off | built into `main.py` |
-| 9 | Rate limiting | API Gateway limits each project to 10 requests a minute | `09_openapi_spec.yaml` |
-| 10 | Cost | Flash against Pro, and how many Gemini calls caching avoids | `10_cost_comparison_demo.py` |
+| 9 | Rate limiting | API Gateway limits each project to 10 requests a minute | `gateway/openapi_spec.yaml` |
+| 10 | Cost | Flash against Pro, and how many Gemini calls caching avoids | `scripts/cost_comparison_demo.py` |
 
 ## Setup
 
@@ -60,8 +66,8 @@ Follow [`commands.md`](commands.md); the order matters:
 4. Topic 3: needs your GitHub account: a one-time browser authorisation, then the trigger and a real push.
 5. Topics 4 and 5: v2 and the rollback. The service's *settings* stay at whatever the last deploy set, so deploy with `MODERATION_POLICY` set explicitly afterwards.
 6. Topics 6 to 8: `curl` calls against the service.
-7. Topic 9: put the real service URL in `09_openapi_spec.yaml`, create the gateway (about 11 minutes), then the API key, which is restricted to this API.
-8. Topic 10: `./.venv/bin/python 10_cost_comparison_demo.py`.
+7. Topic 9: put the real service URL in `gateway/openapi_spec.yaml`, create the gateway (about 11 minutes), then the API key, which is restricted to this API.
+8. Topic 10: `./.venv/bin/python scripts/cost_comparison_demo.py`.
 9. Teardown, at the end of `commands.md`.
 
 ## What was changed from the course files

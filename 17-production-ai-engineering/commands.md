@@ -5,6 +5,10 @@ Every step for this module, done with `gcloud` (and `curl`) only, exactly as it 
 [`bat-files/`](bat-files/) for reference. Nothing in this module needs a password; the only
 secret is the API key created in topic 9, which stays in the gitignored `.env`.
 
+> **Paths.** The run used the files where the course put them (at the module root). They were moved afterwards to
+> `scripts/load_test.py`, `scripts/cost_comparison_demo.py` and `gateway/openapi_spec.yaml`; the commands below use the
+> new paths, and everything else is exactly as it was run.
+
 ```
 Project name:   GCP FDE Project
 Project ID:     gcp-fde-project
@@ -53,7 +57,7 @@ gcloud projects add-iam-policy-binding gcp-fde-project \
   --member="serviceAccount:moderaai-sa@gcp-fde-project.iam.gserviceaccount.com" --role="roles/datastore.user" --condition=None
 ```
 
-Python environment for the local test scripts (`load_test.py`, `10_cost_comparison_demo.py`):
+Python environment for the local test scripts (`scripts/load_test.py`, `scripts/cost_comparison_demo.py`):
 
 ```bash
 python3 -m venv .venv && ./.venv/bin/pip install -r requirements.txt
@@ -89,11 +93,11 @@ curl -X POST $SERVICE_URL/moderate -H "Content-Type: application/json" -d '{"tex
 
 `curl $SERVICE_URL/healthz` returned **Google's own 404 page**, not Flask's: Cloud Run reserves that path
 on its public `run.app` URLs. The route was renamed `/health` in `moderaai/main.py` (and in
-`09_openapi_spec.yaml`).
+`gateway/openapi_spec.yaml`).
 
 ### Gotcha 2: 50 requests do not scale it up as shipped
 
-The first load test (`python load_test.py --url $SERVICE_URL --requests 50`) succeeded 50/50, but **all 50 were
+The first load test (`python scripts/load_test.py --url $SERVICE_URL --requests 50`) succeeded 50/50, but **all 50 were
 served by one instance**: Cloud Run's default is 80 concurrent requests per instance. To make scaling visible,
 concurrency was lowered:
 
@@ -440,7 +444,7 @@ Point the OpenAPI spec at the live service (the placeholder `MODERAAI_SERVICE_UR
 ```bash
 gcloud api-gateway apis create moderaai-api --project=gcp-fde-project
 
-gcloud api-gateway api-configs create moderaai-config --api=moderaai-api --openapi-spec=09_openapi_spec.yaml \
+gcloud api-gateway api-configs create moderaai-config --api=moderaai-api --openapi-spec=gateway/openapi_spec.yaml \
   --backend-auth-service-account=moderaai-sa@gcp-fde-project.iam.gserviceaccount.com --project=gcp-fde-project
 ```
 
@@ -520,11 +524,11 @@ hand-written code in the service.
 
 ## Topic 10 — Cost optimization
 
-`10_cost_comparison_demo.py` needs `PROJECT_ID` (and `SERVICE_URL`) from `.env`, and the ADC login:
+`scripts/cost_comparison_demo.py` needs `PROJECT_ID` (and `SERVICE_URL`) from `.env`, and the ADC login:
 
 ```bash
 set -a && source .env && set +a
-./.venv/bin/python 10_cost_comparison_demo.py
+./.venv/bin/python scripts/cost_comparison_demo.py
 ```
 
 **Part 1: Flash against Pro, same prompt.** The script prints token counts and an estimated cost:

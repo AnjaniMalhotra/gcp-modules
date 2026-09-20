@@ -34,18 +34,18 @@ flowchart TD
 ## Hands-On
 
 ```python
-# 10_cost_comparison_demo.py — runs the same input through both models, prints token counts + estimated cost
+# scripts/cost_comparison_demo.py — runs the same input through both models, prints token counts + estimated cost
 ```
 
 ```bat
-python 10_cost_comparison_demo.py
+python scripts/cost_comparison_demo.py
 ```
 
 ## How We Test It
 
 Two concrete proofs, not estimates:
 
-1. **Model comparison:** `10_cost_comparison_demo.py` sends the identical moderation request through `gemini-flash` and `gemini-pro`, printing each call's actual token usage (from the API response) and the resulting estimated cost side by side — students see the real cost gap, not a claimed one.
+1. **Model comparison:** `scripts/cost_comparison_demo.py` sends the identical moderation request through `gemini-flash` and `gemini-pro`, printing each call's actual token usage (from the API response) and the resulting estimated cost side by side — students see the real cost gap, not a claimed one.
 2. **Caching's real savings:** the script then replays a small batch of requests where roughly half are duplicates of earlier ones. A request counter (a simple in-memory or Firestore-backed counter incremented only on real Gemini calls, from topic 6) proves the number of *actual* Gemini calls is meaningfully lower than the number of *incoming* requests — the exact gap caching closed, shown as a number, not asserted.
 
 Close by walking through the "which earlier topic is secretly also a cost control" list live: caching (fewer calls), `--max-instances` (spend ceiling), rate limiting (abuse ceiling), model choice (per-call price) — reinforcing that this topic isn't new work, it's a new lens on work already done.

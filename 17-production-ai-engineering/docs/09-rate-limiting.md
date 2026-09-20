@@ -29,7 +29,7 @@ flowchart LR
 
 ## Hands-On
 
-`09_openapi_spec.yaml` (excerpt):
+`gateway/openapi_spec.yaml` (excerpt):
 
 ```yaml
 x-google-management:
@@ -70,10 +70,10 @@ That script also creates the API key itself (`gcloud services api-keys create`) 
 
 ## How We Test It
 
-Reuse `load_test.py` (from topic 1) but point it at the **API Gateway URL** with `--api-key %API_KEY%`, not ModeraAI's direct Cloud Run URL, and fire more than 10 requests inside one minute:
+Reuse `scripts/load_test.py` (from topic 1) but point it at the **API Gateway URL** with `--api-key %API_KEY%`, not ModeraAI's direct Cloud Run URL, and fire more than 10 requests inside one minute:
 
 ```bat
-python load_test.py --url %GATEWAY_URL% --requests 15 --api-key %API_KEY%
+python scripts/load_test.py --url %GATEWAY_URL% --requests 15 --api-key %API_KEY%
 ```
 
 The first 10 succeed normally; requests beyond that come back as a real `429`, straight from API Gateway — and this is worth making explicit to students: check ModeraAI's own Cloud Run logs at the same time, and the rejected requests never show up there at all, because the gateway stopped them before they ever reached the service.

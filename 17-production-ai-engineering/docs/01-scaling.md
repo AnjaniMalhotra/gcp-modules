@@ -43,15 +43,15 @@ REM Deploy with a generous ceiling
 gcloud run deploy moderaai --source . --region %REGION% --allow-unauthenticated --max-instances=10
 
 REM Fire the load test — 50 concurrent requests
-python load_test.py
+python scripts/load_test.py
 ```
 
 ## How We Test It
 
 This is the topic where "trust me, it scales" isn't good enough — we prove it two ways:
 
-1. **`load_test.py`** uses Python's `ThreadPoolExecutor` to fire 50 `/moderate` requests at ModeraAI at the same time (not one after another) and prints each request's status code and response time. While it runs, watch the Cloud Run **Metrics** tab — the instance count graph climbs in real time as Cloud Run spins up new copies to absorb the burst.
-2. **The ceiling test:** redeploy with `--max-instances=2`, run `load_test.py` again. Same 50 requests, but now only 2 instances exist — the printed response times are visibly slower, and the metrics graph flatlines at 2 instances instead of climbing. This proves the ceiling is real, not just a config value that gets ignored.
+1. **`scripts/load_test.py`** uses Python's `ThreadPoolExecutor` to fire 50 `/moderate` requests at ModeraAI at the same time (not one after another) and prints each request's status code and response time. While it runs, watch the Cloud Run **Metrics** tab — the instance count graph climbs in real time as Cloud Run spins up new copies to absorb the burst.
+2. **The ceiling test:** redeploy with `--max-instances=2`, run `scripts/load_test.py` again. Same 50 requests, but now only 2 instances exist — the printed response times are visibly slower, and the metrics graph flatlines at 2 instances instead of climbing. This proves the ceiling is real, not just a config value that gets ignored.
 
 ## Common Pitfalls
 

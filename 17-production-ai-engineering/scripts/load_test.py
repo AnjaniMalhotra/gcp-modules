@@ -2,8 +2,8 @@
 rate limiting (topic 9, by pointing TARGET_URL at the API Gateway URL instead).
 
 Usage:
-    python load_test.py                 # 50 concurrent requests against SERVICE_URL
-    python load_test.py --url %GATEWAY_URL% --requests 15 --api-key %API_KEY%
+    python scripts/load_test.py                 # 50 concurrent requests against SERVICE_URL
+    python scripts/load_test.py --url %GATEWAY_URL% --requests 15 --api-key %API_KEY%
 """
 
 import argparse
