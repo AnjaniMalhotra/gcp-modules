@@ -1,0 +1,14 @@
+.env
+.env.*
+!.env.example
+
+# credentials that must never be committed
+client_secret*.json
+token*.json
+
+__pycache__/
+*.pyc
+.venv/
+
+.claude/
+.DS_Store
