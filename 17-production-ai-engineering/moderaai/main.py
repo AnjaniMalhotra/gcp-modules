@@ -100,7 +100,7 @@ def call_gemini(text: str, simulate_transient_failure: bool) -> ModerationResult
 # Not "/healthz": Cloud Run reserves that path on its public URLs and answers 404 itself.
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "policy": MODERATION_POLICY}), 200
+    return jsonify({"status": "ok", "service": "moderaai", "policy": MODERATION_POLICY}), 200
 
 
 @app.route("/moderate", methods=["POST"])
