@@ -61,6 +61,67 @@ Cloud Monitoring showed 15 requests counted in one minute against that limit. Bu
 returned 200; none got a 429. The likely reason is that the key belongs to the same project as the API, and quotas
 limit a *customer* project. Google's documentation did not confirm this. Proving it needs a key from a second project.
 
+## A real project you could build with this: reviews for a candle shop
+
+You run a small shop selling handmade candles, and customers can leave reviews. You don't want abusive or spam
+reviews appearing on your product pages, so every new review is checked before it goes live:
+
+```
+Customer writes a review
+  -> your shop website sends it to the checker
+     -> the checker asks Gemini: "is this okay?"
+        -> okay: publish it     not okay: hold it for you to look at
+```
+
+That checker is ModeraAI. Everything in this module is what you would do to keep it working once real customers use it.
+
+| Topic | The real situation at the candle shop | What you would do |
+|---|---|---|
+| 1 Scaling | You send a sale email and 300 people leave reviews in an hour | Run the checker on Cloud Run with a maximum number of copies: a rush is handled, and a bug can't run up a huge bill |
+| 2 Cloud Build | You are tired of building and uploading the app from your laptop | `gcloud builds submit`: Google builds and deploys it |
+| 3 CI/CD | You fix a bug and forget to deploy it | Connect your GitHub repo, so pushing your code deploys it |
+| 4 Versioning | You want a stricter spam rule but are not sure about it | Deploy version 2 with no visitors and try it on its private address first |
+| 5 Rollbacks | The stricter version starts blocking honest reviews like "arrived late, but lovely" | One command sends everyone back to version 1 in seconds |
+| 6 Caching | A spammer pastes the same fake review 200 times | Remember the answer per review: repeats are instant and free |
+| 7 Retries | Gemini fails for one second and a customer's review errors out | Wait a moment and try again, so the customer never sees the hiccup |
+| 8 Timeouts | Gemini gets slow | Give up after 10 seconds and publish the review as "pending", so checkout never freezes because of a review check |
+| 9 Rate limiting | Someone points a script at your checker and floods it | An API Gateway in front, with a limit per caller (set up here, but not proven to block: see topic 9 above) |
+| 10 Cost | The Gemini bill is bigger than expected | Use the cheaper model, cache, and turn off Gemini's extra "thinking" for a simple yes-or-no task (about 80% fewer tokens in our one test) |
+
+How the pieces connect:
+
+```
+Your shop -> API Gateway (needs a key, limits requests) -> ModeraAI on Cloud Run -> Gemini
+                                                                 |
+                                                         Firestore (the cache)
+
+You push code to GitHub -> Cloud Build -> deploys a new revision of ModeraAI
+```
+
+### How you would actually do it
+
+1. **Build the checker:** one endpoint, text in and a verdict out. This is `moderaai/main.py`.
+2. **Deploy it** to Cloud Run (topics 1 and 2).
+3. **Automate deploys** from GitHub (topic 3).
+4. **Add the protections in the code:** the cache, the retries and the timeouts (topics 6 to 8).
+5. **Practise deploying safely:** the new version at 0% first, with a rollback ready (topics 4 and 5).
+6. **Put the front door in** and give your shop its own key (topic 9).
+7. **Check the cost** once real traffic arrives (topic 10).
+
+### Where else the same ideas apply
+
+None of this is specific to moderation. The same steps fit anything that calls an AI model or another service: a
+support-ticket sorter, a document summariser, a chatbot backend, a receipt reader. If you build only three things for
+a first real project, make them **caching, retries with a timeout, and rollbacks**: they protect you from the most
+common problems, which are a repeated bill, a hiccup, and a bad release.
+
+### What a real team would add
+
+- **Login on the service.** Ours was public, which is fine for a demo but not for a real shop.
+- **Tests** that run before anything deploys.
+- **Alerts**, so you hear about a failing checker before your customers do.
+- **A rate limit that is proven,** tested from a separate project first (see topic 9).
+
 ## Problems found in the course files, and what was done
 
 | # | What went wrong when run for real | Fixed? |
