@@ -7,6 +7,7 @@ for real failures during a live session.
 """
 
 import hashlib
+import logging
 import os
 import time
 
@@ -15,7 +16,10 @@ from google import genai
 from google.genai.types import HttpOptions
 from google.cloud import firestore
 from pydantic import BaseModel
-from tenacity import retry, stop_after_attempt, wait_exponential
+from tenacity import before_sleep_log, retry, stop_after_attempt, wait_exponential
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("moderaai")
 
 app = Flask(__name__)
 
@@ -73,7 +77,9 @@ def build_prompt(text: str) -> str:
     )
 
 
-@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=1, max=8))
+# before_sleep_log writes one line per retry, so the attempts show up in Cloud Run's logs.
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=1, max=8),
+       before_sleep=before_sleep_log(logger, logging.WARNING))
 def call_gemini(text: str, simulate_transient_failure: bool) -> ModerationResult:
     global gemini_call_count
 

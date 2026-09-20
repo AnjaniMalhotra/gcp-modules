@@ -333,3 +333,96 @@ the rollback would have looked like it had not worked.
 Find the revision to roll back to with `gcloud run revisions list --service=moderaai --region=us-central1
 --project=gcp-fde-project`. Here the v1 revision (`moderaai-00006-749`) is the one the CI/CD trigger built in
 topic 3.
+
+---
+
+## Topic 6 — Caching
+
+Built into `moderaai/main.py`: the answer to each (policy, text) is stored in Firestore for an hour. The same text three
+times (`06_test_caching_retries_timeouts.bat`):
+
+```bash
+curl -w "\nTime: %{time_total}s\n" -X POST $SERVICE_URL/moderate -H "Content-Type: application/json" \
+  -d '{"text": "Nice write-up, I learned a lot from it"}'
+# call 1: cache_hit false, 2.92 s   (a real Gemini call)
+# call 2: cache_hit true,  0.46 s
+# call 3: cache_hit true,  0.46 s
+```
+
+The key is a hash of the policy plus the lower-cased, trimmed text, so `"  GREAT ARTICLE  "` and
+`"great article"` share an entry (checked in topic 2). Note that the very first call in a session can already be a
+hit if the text was sent before (an earlier test call did exactly that).
+
+---
+
+## Topic 7 — Retry strategies
+
+`?simulate_transient_failure=true` makes the call fail twice with a `ConnectionError`, then succeed. The service
+retries with `tenacity` (3 attempts, waiting 1 s then 2 s):
+
+```bash
+curl -X POST "$SERVICE_URL/moderate?simulate_transient_failure=true" -H "Content-Type: application/json" \
+  -d '{"text": "retry demo text"}'
+# -> 200, and it took 6.35 s, against 2.36 s for a normal request: about 3 s of waiting between the attempts
+```
+
+### Gotcha: the script says to read the retries in the logs, but nothing logged them
+
+`main.py` had no logging on retries, so there was nothing to find. One line was added to the `@retry` decorator
+(`before_sleep=before_sleep_log(logger, logging.WARNING)`, plus `logging.basicConfig`). Now:
+
+```bash
+gcloud logging read 'resource.type=cloud_run_revision AND resource.labels.service_name=moderaai AND textPayload:"Retrying"' \
+  --project=gcp-fde-project --limit=10 --order=asc --format="value(timestamp,textPayload)"
+# 10:50:04 WARNING:moderaai:Retrying main.call_gemini in 1 seconds as it raised ConnectionError: Simulated transient failure (attempt 1).
+# 10:50:05 WARNING:moderaai:Retrying main.call_gemini in 2 seconds as it raised ConnectionError: Simulated transient failure (attempt 2).
+```
+
+### Gotcha: a rollback moves traffic, not settings
+
+After topics 4 and 5 the service was serving v1 again, but its *settings* (the template new deploys start from) were
+still `MODERATION_POLICY=strict`. A plain `gcloud run deploy` with no `--set-env-vars`, and the CI/CD trigger in
+topic 3, would have quietly shipped the strict policy. The new code was therefore deployed with the policy set
+explicitly, and traffic then pointed at the latest revision again:
+
+```bash
+gcloud run deploy moderaai --source moderaai --project=gcp-fde-project --region=us-central1 --allow-unauthenticated \
+  --service-account=moderaai-sa@gcp-fde-project.iam.gserviceaccount.com \
+  --set-env-vars=PROJECT_ID=gcp-fde-project,LOCATION=us-central1,MODERATION_POLICY=standard,MODEL_NAME=gemini-2.5-flash,GEMINI_TIMEOUT_MS=10000,CACHE_TTL_SECONDS=3600 --quiet
+gcloud run services update-traffic moderaai --region=us-central1 --project=gcp-fde-project --to-latest
+```
+
+---
+
+## Topic 8 — Timeouts
+
+`?simulate_hang=true` makes the handler sleep 60 seconds:
+
+```bash
+curl -w "\nHTTP %{http_code} after %{time_total}s\n" -X POST "$SERVICE_URL/moderate?simulate_hang=true" \
+  -H "Content-Type: application/json" -d '{"text": "timeout demo text"}'
+# -> HTTP 504 after 30.4 s, body "upstream request timeout"
+```
+
+The gcloud log shows what did the cutting: `The request has been terminated because it has reached the maximum
+request timeout`. That is **Cloud Run's request timeout (`--timeout=30`), not the app's own 10-second
+`GEMINI_TIMEOUT_MS`**, which this switch never reaches: it sleeps before Gemini is called.
+
+To test the app-level timeout for real, a temporary revision was deployed with the Gemini timeout at 1 ms, at 0%
+of traffic and with its own URL, called, and then the settings and traffic were put back:
+
+```bash
+gcloud run services update moderaai --region=us-central1 --project=gcp-fde-project \
+  --update-env-vars=GEMINI_TIMEOUT_MS=1 --no-traffic --tag=timeout-test --quiet
+curl -X POST https://timeout-test---moderaai-mewtpyvzkq-uc.a.run.app/moderate -H "Content-Type: application/json" \
+  -d '{"text": "gemini timeout test"}'
+# -> {"error": "moderation failed", "detail": "RetryError[... raised ConnectTimeout>]"}   (HTTP 502, 14 s including a cold start)
+
+# restore, so the test does not leak into later deploys
+gcloud run services update moderaai --region=us-central1 --project=gcp-fde-project \
+  --update-env-vars=GEMINI_TIMEOUT_MS=10000 --no-traffic --quiet
+gcloud run services update-traffic moderaai --region=us-central1 --project=gcp-fde-project --to-latest --remove-tags=timeout-test
+```
+
+So there are two safety nets: the app times the Gemini call out and returns a clean 502 after its retries, and
+Cloud Run cuts anything that runs past 30 seconds with a 504.
