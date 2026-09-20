@@ -50,7 +50,9 @@ class ModerationResult(BaseModel):
 
 
 def content_hash(text: str) -> str:
-    return hashlib.sha256(text.strip().lower().encode("utf-8")).hexdigest()
+    # The policy is part of the key: otherwise a verdict cached under one policy (v2 strict) would be served
+    # after a rollback to another (v1 standard), and the rollback would look like it changed nothing.
+    return hashlib.sha256(f"{MODERATION_POLICY}:{text.strip().lower()}".encode("utf-8")).hexdigest()
 
 
 def build_prompt(text: str) -> str:
@@ -95,8 +97,9 @@ def call_gemini(text: str, simulate_transient_failure: bool) -> ModerationResult
     return ModerationResult.model_validate_json(response.text)
 
 
-@app.route("/healthz", methods=["GET"])
-def healthz():
+# Not "/healthz": Cloud Run reserves that path on its public URLs and answers 404 itself.
+@app.route("/health", methods=["GET"])
+def health():
     return jsonify({"status": "ok", "policy": MODERATION_POLICY}), 200
 
 

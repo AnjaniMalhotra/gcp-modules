@@ -7,7 +7,7 @@
 # this module's folder explicitly via `dir:` rather than assuming '.' is it.
 steps:
   - name: 'gcr.io/cloud-builders/docker'
-    dir: 'code/17-production-ai-engineering/moderaai'
+    dir: '17-production-ai-engineering/moderaai'
     args: ['build', '-t', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/moderaai-repo/moderaai:${_TAG}', '.']
   - name: 'gcr.io/cloud-builders/docker'
     args: ['push', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/moderaai-repo/moderaai:${_TAG}']
