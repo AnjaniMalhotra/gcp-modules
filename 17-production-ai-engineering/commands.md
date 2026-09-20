@@ -265,3 +265,71 @@ curl $SERVICE_URL/health      # -> {"policy":"standard","service":"moderaai","st
 gcloud run revisions list --service=moderaai --region=us-central1 --project=gcp-fde-project
 # -> moderaai-00006-749 active, 100% of traffic   (created by the trigger; this is "v1" from here on)
 ```
+
+---
+
+## Topic 4 — Versioning (v2 next to v1, at 0% of traffic)
+
+Build and tag the v2 image (37 s), then deploy it as a new revision that receives **no traffic** and has its own
+direct URL (`04_deploy_v2_no_traffic.bat`):
+
+```bash
+gcloud builds submit moderaai --project=gcp-fde-project \
+  --tag=us-central1-docker.pkg.dev/gcp-fde-project/moderaai-repo/moderaai:v2.0.0
+
+gcloud run deploy moderaai --project=gcp-fde-project --region=us-central1 \
+  --image=us-central1-docker.pkg.dev/gcp-fde-project/moderaai-repo/moderaai:v2.0.0 \
+  --service-account=moderaai-sa@gcp-fde-project.iam.gserviceaccount.com \
+  --set-env-vars=PROJECT_ID=gcp-fde-project,LOCATION=us-central1,MODERATION_POLICY=strict,MODEL_NAME=gemini-2.5-flash,GEMINI_TIMEOUT_MS=10000,CACHE_TTL_SECONDS=3600 \
+  --no-traffic --tag=v2-0-0 --quiet
+# -> moderaai-00007-vuw deployed, 0 percent of traffic
+# -> reachable directly at https://v2-0-0---moderaai-mewtpyvzkq-uc.a.run.app
+```
+
+Note that "v2" is the same code with `MODERATION_POLICY=strict`: the difference is a setting, not new logic.
+
+### Gotcha: the tag must be at least 3 characters
+
+The script's `--tag=v2` fails with `service.spec.traffic[1].tag: must be at least 3 characters long`. Nothing is
+created by the failed attempt. `v2-0-0` works.
+
+Two versions live side by side. The same comment sent to each:
+
+```bash
+curl -X POST $SERVICE_URL/moderate -H "Content-Type: application/json" -d '{"text": "I disagree with this policy."}'
+# v1 (main URL)   -> flagged: false, policy: standard
+# v2 (tagged URL) -> flagged: true,  category: critical, policy: strict
+```
+
+Both were cache misses. With the original cache key (text only), v2 would have been handed v1's cached answer
+and the difference would have been hidden.
+
+---
+
+## Topic 5 — Rollbacks
+
+```bash
+# 1. ship v2 to everyone
+gcloud run services update-traffic moderaai --region=us-central1 --project=gcp-fde-project --to-latest
+# -> moderaai-00007-vuw 100%
+
+# 2. the same mild comment is now wrongly flagged
+curl -X POST $SERVICE_URL/moderate -H "Content-Type: application/json" -d '{"text": "I disagree with this policy."}'
+# -> flagged: true, policy: strict
+
+# 3. roll back: one command, no rebuild (9 seconds, 16:15:15 to 16:15:24)
+gcloud run services update-traffic moderaai --region=us-central1 --project=gcp-fde-project \
+  --to-revisions=moderaai-00006-749=100
+# -> moderaai-00006-749 100%
+
+# 4. the same comment after the rollback
+# -> flagged: false, policy: standard
+```
+
+Steps 2 and 4 were both `cache_hit: true`, and each returned the verdict of its own policy. That is the cache-key
+fix at work: with the original key, step 4 would have returned v2's cached `flagged: true` for up to an hour and
+the rollback would have looked like it had not worked.
+
+Find the revision to roll back to with `gcloud run revisions list --service=moderaai --region=us-central1
+--project=gcp-fde-project`. Here the v1 revision (`moderaai-00006-749`) is the one the CI/CD trigger built in
+topic 3.
