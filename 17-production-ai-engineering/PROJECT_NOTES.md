@@ -81,12 +81,13 @@ limit a *customer* project. Google's documentation did not confirm this. Proving
 
 ## See it, and question it
 
-The service lives at `https://moderaai-1039893753206.us-central1.run.app` only until it is deleted (teardown is at the
-end of `commands.md`). While it exists:
+The service was live at `https://moderaai-1039893753206.us-central1.run.app` during the run and was **deleted on
+2026-09-20** (teardown is at the end of `commands.md`), so these commands no longer work. To try it again, redeploy
+with the steps in `commands.md` (about 5 minutes for topics 1 and 2); the same commands then apply:
 
 ```bash
-curl https://moderaai-1039893753206.us-central1.run.app/health
-curl -X POST https://moderaai-1039893753206.us-central1.run.app/moderate -H "Content-Type: application/json" \
+curl https://<your-service-url>/health
+curl -X POST https://<your-service-url>/moderate -H "Content-Type: application/json" \
   -d '{"text": "Your comment here"}'
 ```
 

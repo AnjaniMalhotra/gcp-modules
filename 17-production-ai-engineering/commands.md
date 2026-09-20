@@ -571,3 +571,92 @@ verdicts on a batch of real comments. It was **not applied** to `moderaai/main.p
 
 The three cost levers seen in this module, in order of effect: caching (calls avoided entirely), the model choice (Flash
 against Pro), and the thinking budget (tokens per call). Instance limits (topic 1) cap the worst case.
+
+---
+
+## Teardown
+
+Nothing in this module bills by the hour, but the service was public (anyone with its URL could cause Gemini calls), so it
+was deleted as soon as the walkthrough was done. Before deleting, what each resource contained was checked, so that only
+this module's things were removed: the image repositories held only `moderaai` images, exactly one API key matched by name
+(the Module 11 Maps key was not touched), and Firestore held only the `moderation_cache` collection.
+
+The slow one goes first, in the background. Delete the gateway, then its config, then the API (took 2 min 9 s in total,
+against 10 min 41 s to create):
+
+```bash
+gcloud api-gateway gateways delete moderaai-gateway --location=us-central1 --project=gcp-fde-project --quiet
+gcloud api-gateway api-configs delete moderaai-config --api=moderaai-api --project=gcp-fde-project --quiet
+gcloud api-gateway apis delete moderaai-api --project=gcp-fde-project --quiet
+```
+
+The CI/CD pieces (the GitHub connection is deleted after the repo link), then the service:
+
+```bash
+gcloud builds triggers delete moderaai-deploy-trigger --region=us-central1 --project=gcp-fde-project --quiet
+gcloud builds repositories delete gcp-modules --connection=moderaai-github --region=us-central1 --project=gcp-fde-project --quiet
+gcloud builds connections delete moderaai-github --region=us-central1 --project=gcp-fde-project --quiet
+gcloud run services delete moderaai --region=us-central1 --project=gcp-fde-project --quiet     # all 11 revisions
+```
+
+The API key is deleted by its exact resource name, so the other key cannot be hit by mistake:
+
+```bash
+KEYNAME=$(gcloud services api-keys list --project=gcp-fde-project --filter='displayName="ModeraAI API Key"' --format="value(name)")
+gcloud services api-keys delete "$KEYNAME" --project=gcp-fde-project --quiet
+```
+
+Data, images and identity:
+
+```bash
+gcloud firestore databases delete --database="(default)" --project=gcp-fde-project --quiet
+gcloud artifacts repositories delete moderaai-repo --location=us-central1 --project=gcp-fde-project --quiet
+gcloud artifacts repositories delete cloud-run-source-deploy --location=us-central1 --project=gcp-fde-project --quiet
+
+for role in roles/aiplatform.user roles/datastore.user; do
+  gcloud projects remove-iam-policy-binding gcp-fde-project \
+    --member="serviceAccount:moderaai-sa@gcp-fde-project.iam.gserviceaccount.com" --role="$role" --condition=None
+done
+gcloud iam service-accounts delete moderaai-sa@gcp-fde-project.iam.gserviceaccount.com --project=gcp-fde-project --quiet
+
+# the role granted to Cloud Build's own service agent in topic 3
+gcloud projects remove-iam-policy-binding gcp-fde-project \
+  --member="serviceAccount:service-1039893753206@gcp-sa-cloudbuild.iam.gserviceaccount.com" \
+  --role="roles/secretmanager.admin" --condition=None
+```
+
+### Gotcha: deleting the GitHub connection leaves its secret behind
+
+The connection stored GitHub's token in Secret Manager, and deleting the connection did not remove it:
+
+```bash
+gcloud secrets list --project=gcp-fde-project                                   # moderaai-github-github-oauthtoken-ca5736
+gcloud secrets delete moderaai-github-github-oauthtoken-ca5736 --project=gcp-fde-project --quiet
+```
+
+The GitHub side is separate: the Cloud Build GitHub App stays installed on the GitHub account until it is removed at
+https://github.com/settings/installations.
+
+### Verify it is gone
+
+Every list came back empty, rather than trusting that `delete` succeeded:
+
+```bash
+gcloud run services list --region=us-central1 --project=gcp-fde-project                # Listed 0 items.
+gcloud api-gateway gateways list --location=us-central1 --project=gcp-fde-project      # Listed 0 items.
+gcloud api-gateway apis list --project=gcp-fde-project                                 # Listed 0 items.
+gcloud builds triggers list --region=us-central1 --project=gcp-fde-project             # Listed 0 items.
+gcloud builds connections list --region=us-central1 --project=gcp-fde-project          # Listed 0 items.
+gcloud artifacts repositories list --project=gcp-fde-project                           # Listed 0 items.
+gcloud firestore databases list --project=gcp-fde-project                              # Listed 0 items.
+gcloud secrets list --project=gcp-fde-project                                          # Listed 0 items.
+gcloud services api-keys list --project=gcp-fde-project --format="value(displayName)"  # module-11-maps-key only
+```
+
+The `moderaai-api-...cloud.goog` service was no longer enabled, no role bindings remained for `moderaai-sa`, and both
+public addresses returned Google's generic 404.
+
+**Left alone on purpose:** the Module 11 Maps key, the enabled APIs (including Secret Manager, which this module turned
+on), the retained Cloud Logging entries, and the shared Cloud Build source bucket `gcp-fde-project_cloudbuild`
+(8 archives, 17 MB, used by earlier modules too). The build uploads in topic 2 sent the whole repo, so its archives
+contain this repo's files, though never `.env` or tokens.
