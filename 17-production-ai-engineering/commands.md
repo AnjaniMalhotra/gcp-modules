@@ -184,3 +184,84 @@ the service already existed from topic 1 and `gcloud run deploy` keeps the exist
 
 The cache fix from topic 1 was confirmed on this new revision: the same text with different capitalisation and
 spaces came back with `cache_hit: true`.
+
+---
+
+## Topic 3 — CI/CD (push to GitHub, it deploys itself)
+
+`03_create_ci_cd_trigger.bat` uses the older ("1st generation") GitHub connection, which can only be made by
+clicking through the Console. This run used the newer connection instead: everything is a command except one
+browser authorisation.
+
+**1. Secret Manager, which the connection needs.** The first attempt failed with
+`could not assert Secret Manager permissions`. Cloud Build stores GitHub's token in Secret Manager, so its own
+service agent needs the API and the role:
+
+```bash
+gcloud services enable secretmanager.googleapis.com --project=gcp-fde-project
+gcloud projects add-iam-policy-binding gcp-fde-project \
+  --member="serviceAccount:service-1039893753206@gcp-sa-cloudbuild.iam.gserviceaccount.com" \
+  --role="roles/secretmanager.admin" --condition=None
+```
+
+**2. Create the connection.** It stays `PENDING_USER_OAUTH` and prints a link. Open the link in a browser signed in
+to the Google account that owns the project, authorise GitHub as the repo owner, and install the Cloud Build
+GitHub App on the repository. This is the one step that cannot be a command.
+
+```bash
+gcloud builds connections create github moderaai-github --region=us-central1 --project=gcp-fde-project
+gcloud builds connections describe moderaai-github --region=us-central1 --project=gcp-fde-project   # installationState: COMPLETE
+```
+
+**3. Link the repo and create the trigger.** It watches only the module's branch, and only changes under
+`moderaai/`, so other commits do not redeploy anything. It runs as the same service account the manual build
+in topic 2 used:
+
+```bash
+gcloud builds repositories create gcp-modules --remote-uri=https://github.com/AnjaniMalhotra/gcp-modules.git \
+  --connection=moderaai-github --region=us-central1 --project=gcp-fde-project
+
+gcloud builds triggers create github --name=moderaai-deploy-trigger --region=us-central1 --project=gcp-fde-project \
+  --repository=projects/gcp-fde-project/locations/us-central1/connections/moderaai-github/repositories/gcp-modules \
+  --branch-pattern='^17-production-ai-engineering$' \
+  --build-config=17-production-ai-engineering/moderaai/cloudbuild.yaml \
+  --included-files='17-production-ai-engineering/moderaai/**' \
+  --service-account=projects/gcp-fde-project/serviceAccounts/1039893753206-compute@developer.gserviceaccount.com
+```
+
+**4. Test it with a real push.** `/health` was changed to also report `"service": "moderaai"`, then:
+
+```bash
+git push -u origin 17-production-ai-engineering
+gcloud builds list --region=us-central1 --project=gcp-fde-project --limit=1
+```
+
+### Gotcha: the first triggered build failed instantly
+
+The trigger fired within seconds (the detection works), but the build was rejected before any step ran:
+
+```
+invalid argument: if 'build.service_account' is specified, the build must either (a) specify
+'build.logs_bucket', ... or (c) use either CLOUD_LOGGING_ONLY / NONE logging options
+```
+
+A build that runs as a specific service account has to say where its logs go. Two lines at the end of
+`moderaai/cloudbuild.yaml` fixed it, and pushing that fix retriggered the build:
+
+```yaml
+options:
+  logging: CLOUD_LOGGING_ONLY
+```
+
+(The manual build in topic 2 did not need this: it ran with the default legacy log settings.)
+
+### Result
+
+Build `c5d99104-…` ran automatically for commit `0ea7e47` (the same commit as local HEAD), took about 2.5
+minutes, and succeeded. Nothing was run by hand. The live service afterwards:
+
+```bash
+curl $SERVICE_URL/health      # -> {"policy":"standard","service":"moderaai","status":"ok"}
+gcloud run revisions list --service=moderaai --region=us-central1 --project=gcp-fde-project
+# -> moderaai-00006-749 active, 100% of traffic   (created by the trigger; this is "v1" from here on)
+```
