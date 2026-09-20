@@ -25,3 +25,6 @@ substitutions:
   _TAG: latest
 images:
   - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/moderaai-repo/moderaai:${_TAG}'
+options:
+  # Required when the build runs as a specific service account (as the topic 3 trigger does).
+  logging: CLOUD_LOGGING_ONLY
